@@ -1,0 +1,23 @@
+{
+  "name": "erosion-machine-2",
+  "version": "1.0.0",
+  "description": "This project is bootstrapped with [Create Elm App](https://github.com/halfzebra/create-elm-app).",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jquery": "^3.5.1",
+    "lodash": "^4.17.20",
+    "shadow-cljs": "^2.11.4"
+  },
+  "dependencies": {
+    "lodash.invoke": "^4.5.2"
+  }
+}
