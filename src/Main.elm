@@ -6,6 +6,7 @@ module Main exposing (..)
 --
 
 import Browser
+import Browser.Events as Events
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -17,12 +18,14 @@ import List as L
 import Random
 import Process
 import Task
+import Time
 
 import Types exposing (..)
 import Timeline.Decoder exposing (..)
 import Timeline.Types exposing (..)
 import Timeline.View
-import Index.View
+-- import Index.View
+import ErosionMachine.ErosionMachine exposing (..)
 
 -- MAIN
 
@@ -43,17 +46,17 @@ main =
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  (Loading, getTimeline)
+  (LoadingTimeline, getTimeline)
 
 
-randomEvent : List Event -> Random.Generator (Maybe Event)
-randomEvent es = Random.uniform (L.head es) (L.map (\x -> Just x) es)
+-- randomEvent : List Event -> Random.Generator (Maybe Event)
+-- randomEvent es = Random.uniform (L.head es) (L.map (\x -> Just x) es)
 
-changeRandomEvent : Timeline -> Event -> Cmd Msg
-changeRandomEvent tl e =
-    case (getDuration e) of
-        Nothing -> Cmd.none
-        Just dur -> Process.sleep (toFloat dur) |> Task.perform (always (FireRandomEvent tl))
+-- changeRandomEvent : Timeline -> Event -> Cmd Msg
+-- changeRandomEvent tl e =
+--     case (getDuration e) of
+--         Nothing -> Cmd.none
+--         Just dur -> Process.sleep (toFloat dur) |> Task.perform (always (FireRandomEvent tl))
 
 -- showEvent : Timeline -> Maybe Event -> Cmd Msg
 -- showEvent tl e =
@@ -63,33 +66,66 @@ changeRandomEvent tl e =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
+    --
+    -- loading timeline
+    --
     LoadTimeline ->
-      (Loading, getTimeline)
+      (LoadingTimeline, getTimeline)
 
     GotTimeline result ->
       case result of
-        Ok url ->
-          (Success url, Cmd.none)
-
+        Ok timeline ->
+          (Waiting {timeline = timeline, counter = 0}, Cmd.none)
         Err s ->
           (ErrorLoadTimeline s, Cmd.none)
-    FireRandomEvent tl ->
-        ( model
-        , Random.generate (RandomEventFired tl) (randomEvent tl.events)
-        )
-    RandomEventFired tl mE ->
-        case mE of
-            Nothing -> (Error "error getting random event" tl, Cmd.none)
-            Just e -> ( ViewEvent tl Nothing
-                      , (Process.sleep 100 |> Task.perform (always (ShowEvent tl e))))
-    ShowEvent tl e -> (ViewEvent tl (Just e), changeRandomEvent tl e)
+
+    --
+    -- selecting erosion
+    --
+    SelectNextErosion ->
+        handleSelectNextErosion model
+    --
+    -- eroding
+    --
+    Erode e ->
+        (showEvent model e, Cmd.batch [jsErode e, waitTillTheEndOfEvent e])
+
+    UserInput ->
+        (wait model, handleUserInput model)
+    TimeTick ->
+        handleTimeTick model
+    RaiseError s ->
+        (Error s, Cmd.none)
+    -- RandomEventFired tl mE ->
+    --     case mE of
+    --         Nothing -> (Error "error getting random event" tl, Cmd.none)
+    --         Just e -> ( ViewEvent tl Nothing
+    --                   , (Process.sleep 100 |> Task.perform (always (ShowEvent tl e))))
+    -- ShowEvent tl e -> (ViewEvent tl (Just e), changeRandomEvent tl e)
 
 
+
+userInputSub : (D.Decoder Msg -> Sub Msg) -> Sub Msg
+userInputSub f =
+    f (D.succeed UserInput)
+
+userInputSubs : List (Sub Msg)
+userInputSubs =
+    [userInputSub Events.onClick
+    , userInputSub Events.onMouseMove
+    , userInputSub Events.onKeyUp]
+
+timerSub : Sub Msg
+timerSub =
+    Time.every 1000 (always TimeTick)
 
 -- SUBSCRIPTIONS
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  Sub.none
+    case model of
+        Showing _ ->
+            Sub.batch userInputSubs
+        _ -> Sub.batch <| timerSub :: userInputSubs
 
 
 
@@ -111,29 +147,14 @@ viewTimeline model =
         , button [ onClick LoadTimeline ] [ text "Try Again!" ]
         ]
 
-    Loading ->
-      text "Loading..."
+    LoadingTimeline ->
+      text "Loading timeline..."
 
-    Success timeline ->
-        Index.View.render timeline
-    Error err tl ->
-        div []
-            [ h1 [] [text err]
-            , Index.View.buttonFireRandomEvent tl]
-    ViewEvent timeline mE ->
-        div []
-            [
-             Index.View.buttonFireRandomEvent timeline
-            , viewMaybe Timeline.View.renderEvent mE]
+    Waiting {counter} ->
+        text ("waiting " ++ (String.fromInt counter))
 
+    Showing {event} ->
+        text <| "showing " ++ (getLabel event)
 
-
--- HTTP
-
-
-getTimeline : Cmd Msg
-getTimeline =
-  Http.get
-    { url = "https://dev.eeefff.org/data/outsourcing-paradise-parasite/erosion-machine-timeline.json"
-    , expect = Http.expectJson GotTimeline timelineDecoder
-    }
+    Error msg ->
+        text <| "ERROR: " ++ msg

@@ -109,6 +109,16 @@ getType e =
         (AddClass acd) -> "add_class"
         (Assemblage ad) -> "assemblage"
 
+getId : Event -> String
+getId e =
+    case e of
+        (ShowVideo vd) -> vd.id
+        (ShowImage id) -> id.id
+        (ShowText td) -> td.id
+        (AddClass acd) -> acd.id
+        (Assemblage ad) -> ad.label
+
+
 -- type alias G1 = { name : String }
 
 -- type alias G2 = { name : String }

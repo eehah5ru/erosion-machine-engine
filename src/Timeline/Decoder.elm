@@ -3,7 +3,10 @@ module Timeline.Decoder exposing (..)
 import Json.Decode as D exposing (Decoder, field, string, int, bool, map2, list)
 import Json.Decode.Extra as DE
 import List as L
+import Http
 
+
+import Types exposing (..)
 import Timeline.Types exposing (..)
 
 --
@@ -77,3 +80,17 @@ addClassDecoder =
 timelineDecoder : Decoder Timeline
 timelineDecoder =
   D.map2 Timeline timelineConfigDecoder eventsDecoder
+
+
+--
+--
+-- HTTP
+--
+--
+
+getTimeline : Cmd Msg
+getTimeline =
+  Http.get
+    { url = "https://dev.eeefff.org/data/outsourcing-paradise-parasite/erosion-machine-timeline.json"
+    , expect = Http.expectJson GotTimeline timelineDecoder
+    }

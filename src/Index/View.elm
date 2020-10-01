@@ -24,14 +24,13 @@ renderEvents es =
     in
         ul [] evs
 
-buttonFireRandomEvent : Timeline -> Html Msg
-buttonFireRandomEvent timeline =
-    button [ onClick (FireRandomEvent timeline), style "display" "block" ] [ text "fire random event" ]
+-- buttonFireRandomEvent : Timeline -> Html Msg
+-- buttonFireRandomEvent timeline =
+--     button [ onClick (FireRandomEvent timeline), style "display" "block" ] [ text "fire random event" ]
 
 
 render : Timeline -> Html Msg
 render timeline =
     div []
         [
-        buttonFireRandomEvent timeline
-        , renderEvents timeline.events]
+        renderEvents timeline.events]
