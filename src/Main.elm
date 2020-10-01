@@ -82,13 +82,13 @@ update msg model =
     --
     -- selecting erosion
     --
-    SelectNextErosion ->
-        handleSelectNextErosion model
+    SelectNextErosion frameId ->
+        handleSelectNextErosion model frameId
     --
     -- eroding
     --
-    Erode e ->
-        (showEvent model e, Cmd.batch [jsErode e, waitTillTheEndOfEvent e])
+    Erode (e, frameId) ->
+        (showEvent model e frameId, Cmd.batch [jsErode e, waitTillTheEndOfEvent e frameId])
 
     UserInput ->
         (wait model, handleUserInput model)

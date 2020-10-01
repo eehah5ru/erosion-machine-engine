@@ -6,6 +6,7 @@ import Process
 import Task
 import Time
 import Json.Decode as D
+import Uuid
 
 import Types exposing (..)
 import Timeline.Types exposing (..)
@@ -21,14 +22,14 @@ selectErosion : Timeline -> Result String (Cmd Msg)
 selectErosion timeline =
     case Maybe.map2 Tuple.pair (L.head timeline.events) (Just timeline.events) of
         Nothing -> (Err "empty events list")
-        Just (e, es) -> Ok <| Random.generate Erode <| Random.uniform e es
+        Just (e, es) -> Ok <| Random.generate Erode <| Random.map2 Tuple.pair (Random.uniform e es) (Uuid.uuidGenerator)
 
 
-waitTillTheEndOfEvent : Event -> Cmd Msg
-waitTillTheEndOfEvent e =
+waitTillTheEndOfEvent : Event -> Uuid.Uuid -> Cmd Msg
+waitTillTheEndOfEvent e frameId =
     case (getDuration e) of
         Nothing -> Cmd.none
-        Just dur -> Process.sleep (toFloat dur) |> Task.perform (always SelectNextErosion)
+        Just dur -> Process.sleep (toFloat dur) |> Task.perform (always (SelectNextErosion frameId))
 
 handleUserInput : Model -> Cmd Msg
 handleUserInput m =
@@ -49,13 +50,17 @@ handleTimeTick m =
                 (tick m, Cmd.none)
         _ -> (m, Cmd.none)
 
-handleSelectNextErosion : Model -> (Model, Cmd Msg)
-handleSelectNextErosion model =
+handleSelectNextErosion : Model -> Uuid.Uuid -> (Model, Cmd Msg)
+handleSelectNextErosion model sourceFrameId =
     case model of
-        Showing {timeline} ->
-            case selectErosion timeline of
-                Err s -> (Error s, Cmd.none)
-                Ok cmd -> (model, cmd)
+        Showing {timeline, frameId} ->
+            if frameId /= sourceFrameId then
+                (model, Cmd.none)
+            else
+                case selectErosion timeline of
+                    Err s -> (Error s, Cmd.none)
+                    Ok cmd -> (model, cmd)
+
         _ -> (model, Cmd.none)
 
 --
@@ -81,18 +86,20 @@ rollBack showed =
 --
 --
 
-showEvent : Model -> Event -> Model
-showEvent m e =
+showEvent : Model -> Event -> Uuid.Uuid -> Model
+showEvent m e fId =
     case m of
         Waiting {timeline} ->
             Showing { timeline = timeline
                     , showed = [e]
-                    , event = e}
+                    , event = e
+                    , frameId = fId}
         Showing {showed, timeline} ->
             Showing { timeline = timeline
                     -- FIXME - add class should not be added to the list of rolled back elements
                     , showed = e :: showed
-                    , event = e}
+                    , event = e
+                    , frameId = fId}
         _ -> Error "Cannot show event from this state"
 
 --
