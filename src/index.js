@@ -69,7 +69,7 @@ function getTarget() {
 
   // TODO: tell elm if there is not any elements to erode
   // TODO: do not erode erosion elements added by jsErode func
-  return _.invoke(jQuery(document), findFn, "article *:not(.eroded)").random();
+  return _.invoke(jQuery(document), findFn, "article *:not(.eroded)").filter(":not(.erosion)").random();
 };
 
 //
@@ -103,21 +103,43 @@ function erode(el) {
 
 }
 
+//
+// play video
+//
 function playVideo(videoElement) {
   const log = _.partial(console.log, `[playVideo/${videoElement.id}]`);
   const error = _.partial(console.error, `[playVideo/${videoElement.id}]`);
 
-  // videoElement.textTracks[0].oncuechange = function() {
-  //   try {
-  //     event.subtitleBoxEl.innerText = get(
-  //       event.el,
-  //       'textTracks[0].activeCues[0].text',
-  //       ''
-  //     )
-  //   } catch (err) {
-  //     console.error('💥 Error adding subtitle:', err)
-  //   }
-  // }
+  //
+  // create subtitles
+  //
+  let subtitlesElement = document.createElement('div');
+  jQuery(subtitlesElement).addClass("subtitle-box");
+  jQuery("body").append(subtitlesElement);
+
+
+  //
+  // run subtitles
+  //
+  videoElement.textTracks[0].oncuechange = function() {
+    try {
+      subtitlesElement.innerText = _.get(
+        videoElement,
+        'textTracks[0].activeCues[0].text',
+        ''
+      );
+    } catch (err) {
+      error('error adding subtitle', err);
+    }
+  };
+
+  //
+  // delete subtitles when finished
+  //
+  jQuery(videoElement).on('ended', function() {
+    jQuery(subtitlesElement).remove();
+  });
+
   let promise = videoElement.play();
 
   if (promise !== undefined) {
@@ -132,15 +154,25 @@ function playVideo(videoElement) {
 }
 
 //
+// create base element
+//
+function createBaseErosionElement(eType, data) {
+  let e = document.createElement(eType);
+
+  e.id = _.get(data, 'id', _.uniqueId());
+  e.classList = _.get(data, 'class', '');
+  // jQuery(e).addClass('eroded');
+
+  return e;
+}
+
+//
 // stub element
 //
 // FIXME: remove when all ports will be implemented
 function stubElement(stubData) {
-  let e = document.createElement("span");
+  let e = createBaseErosionElement("span", stubData);
 
-  e.id = _.get(stubData, 'id', _.uniqueId());
-  e.classList = _.get(stubData, '_class', '');
-  jQuery(e).addClass('eroded');
   e.innerText = _.get(stubData, 'id', '');
 
   return e;
@@ -156,13 +188,13 @@ function stubElement(stubData) {
 // show video
 //
 erosionMachine.ports.jsShowVideo.subscribe(function(videoData) {
-  const log = _.partial(console.log, '[showVideo]');
+  const log = _.partial(console.log, `[showVideo/${videoData.id}]`);
+  const error = _.partial(console.error, `[showVideo/${videoData.id}]`);
+
   log('data', videoData);
 
-  let e = document.createElement('video');
-  e.id = _.get(videoData, 'id', _.uniqueId());
-  e.classList = _.get(videoData, '_class', '');
-  jQuery(e).addClass('eroded');
+  let e = createBaseErosionElement('video', videoData);
+
   e.loop = _.get(videoData, 'loop', 'false');
   e.preload = 'auto';
   e.crossOrigin = 'anonymous';
@@ -174,7 +206,43 @@ erosionMachine.ports.jsShowVideo.subscribe(function(videoData) {
   try {
     e.appendChild(sourceElement);
   } catch (err) {
-    console.log(err);
+    error('error adding source element', err);
+    throw err;
+  }
+
+  if (_.has(videoData, 'subtitlesEn')) {
+    let track = _.merge(document.createElement('track'),
+                        {
+                          kind: 'metadata',
+                          label: 'English subtitles',
+                          src: videoData.subtitlesEn,
+                          srcLang: 'en',
+                          default: true
+                        });
+
+    try {
+      e.appendChild(track);
+    } catch (err) {
+      error('error adding track element', err);
+      throw err;
+    }
+  }
+
+  if (_.has(videoData, 'subtitlesRu')) {
+    let track = _.merge(document.createElement('track'),
+                        {
+                          kind: 'metadata',
+                          label: 'Russian subtitles',
+                          src: videoData.subtitlesRu,
+                          srcLang: 'ru'
+                        });
+
+    try {
+      e.appendChild(track);
+    } catch (err) {
+      error('error adding track element', err);
+      throw err;
+    }
   }
 
   erode(e);
@@ -188,7 +256,10 @@ erosionMachine.ports.jsShowImage.subscribe(function(imageData) {
   const log = _.partial(console.log, '[showImage]');
   log('data', imageData);
 
-  erode(stubElement(imageData));
+  let e = createBaseErosionElement('img', imageData);
+  e.src = _.get(imageData, 'src', '');
+
+  erode(e);
 });
 
 //
@@ -236,6 +307,9 @@ erosionMachine.ports.jsRollBack.subscribe(function(erodedIds) {
   const log = _.partial(console.log, '[roll-back]');
 
   log('ids to roll back', erodedIds);
+
+  // remove subtitles
+  jQuery(".subtitle-box").remove();
 
   _.each(erodedIds, function(eId) {
     jQuery(`#${eId}`).remove();
