@@ -133,9 +133,7 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
   div []
-    [ h2 [] [ text "Load" ]
-    , viewTimeline model
-    ]
+    [ viewTimeline model ]
 
 
 viewTimeline : Model -> Html Msg
