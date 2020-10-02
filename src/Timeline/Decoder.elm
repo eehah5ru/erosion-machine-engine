@@ -2,6 +2,7 @@ module Timeline.Decoder exposing (..)
 
 import Json.Decode as D exposing (Decoder, field, string, int, bool, map2, list)
 import Json.Decode.Extra as DE
+import Json.Decode.Pipeline exposing (required, optional)
 import List as L
 import Http
 
@@ -40,41 +41,46 @@ eventsDecoder =
 
 showVideoDecoder : Decoder Event
 showVideoDecoder =
-    D.map8 VideoData
-        (field "id" string)
-        (field "label" string)
-        (field "class" string)
-        (field "duration" int)
-        (field "url_mp4" string)
-        (field "subtitles_ru" string)
-        (field "subtitles_en" string)
-        (field "loop" bool |> DE.withDefault False) |> fromData ShowVideo
+    fromData ShowVideo <| (D.succeed VideoData
+        |> required "id" string
+        |> required "label" string
+        |> required "class" string
+        |> required "duration" int
+        |> required "url_mp4" string
+        |> required "subtitles_ru" string
+        |> required "subtitles_en" string
+        |> (optional "loop" bool False)
+        |> (optional "delayed" int 0))
 
 showImageDecoder : Decoder Event
 showImageDecoder =
-    D.map5 ImageData
-        (field "id" string)
-        (field "label" string)
-        (field "class" string)
-        (field "duration" int)
-        (field "src" string) |> fromData ShowImage
+    fromData ShowImage <| (D.succeed ImageData
+        |> required "id" string
+        |> required "label" string
+        |> required "class" string
+        |> required "duration" int
+        |> required "src" string
+        |> optional "delayed" int 0)
 
 showTextDecoder : Decoder Event
 showTextDecoder =
-    D.map5 TextData
-        (field "id" string)
-        (field "label" string)
-        (field "class" string)
-        (field "duration" int)
-        (field "text" string) |> fromData ShowText
+    fromData ShowText
+        <| (D.succeed TextData
+                |> required "id" string
+                |> required "label" string
+                |> required "class" string
+                |> required "duration" int
+                |> required "text" string
+                |> optional "delayed" int 0)
 
 addClassDecoder : Decoder Event
 addClassDecoder =
-    D.map4 AddClassData
-        (field "id" string)
-        (field "label" string)
-        (field "class" string)
-        (field "delayed" int) |> fromData AddClass
+    fromData AddClass
+        <| (D.succeed AddClassData
+                   |> required "id" string
+                   |> required "label" string
+                   |> required "class" string
+                   |> optional "delayed" int 0)
 
 
 timelineDecoder : Decoder Timeline

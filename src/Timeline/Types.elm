@@ -24,6 +24,7 @@ type alias VideoData
       , subtitlesRu : String
       , subtitlesEn : String
       , loop : Bool
+      , delayed : Int
       }
 
 type alias ImageData =
@@ -32,6 +33,7 @@ type alias ImageData =
     , class : String
     , duration : Int
     , src : String
+    , delayed : Int
     }
 
 type alias TextData =
@@ -40,6 +42,7 @@ type alias TextData =
     , class : String
     , duration : Int
     , text : String
+    , delayed : Int
     }
 
 type alias AddClassData =
