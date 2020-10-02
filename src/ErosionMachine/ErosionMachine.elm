@@ -2,6 +2,7 @@ module ErosionMachine.ErosionMachine exposing (..)
 
 import List as L
 import Random
+import Random.List exposing (shuffle)
 import Process
 import Task
 import Time
@@ -12,30 +13,23 @@ import Types exposing (..)
 import Timeline.Types exposing (..)
 import ErosionMachine.Ports exposing (..)
 
+
 --
 -- cmd helpers
 --
 
-
-
-selectErosion : Timeline -> Result String (Cmd Msg)
+selectErosion : Timeline -> Cmd Msg
 selectErosion timeline =
-    case Maybe.map2 Tuple.pair (L.head timeline.events) (Just timeline.events) of
-        Nothing -> (Err "empty events list")
-        Just (e, es) -> Ok <| Random.generate Erode <| Random.map2 Tuple.pair (Random.uniform e es) (Uuid.uuidGenerator)
+    Random.generate PlanErosion <| Random.map2 Tuple.pair (shuffle timeline.events) (Uuid.uuidGenerator)
 
-
-waitTillTheEndOfEvent : Event -> Uuid.Uuid -> Cmd Msg
-waitTillTheEndOfEvent e frameId =
-    case (getDuration e) of
-        Nothing -> Cmd.none
-        Just dur -> Process.sleep (toFloat dur) |> Task.perform (always (SelectNextErosion frameId))
-
+waitTillTheEndOfFrame : Int -> Uuid.Uuid -> Cmd Msg
+waitTillTheEndOfFrame delay frameId =
+    Process.sleep (toFloat delay) |> Task.perform (always (SelectNextErosion frameId))
 handleUserInput : Model -> Cmd Msg
 handleUserInput m =
     case m of
-        Showing {showed} ->
-            rollBack showed
+        Showing {events} ->
+            rollBack <| List.map (\x -> x.event) events
         _ -> Cmd.none
 
 handleTimeTick : Model -> (Model, Cmd Msg)
@@ -43,9 +37,7 @@ handleTimeTick m =
     case m of
         Waiting {counter, timeline} ->
             if counter > 5 then
-                case selectErosion timeline of
-                    Err s -> (Error s, Cmd.none)
-                    Ok cmd -> (tick m, cmd)
+                (tick m, selectErosion timeline)
             else
                 (tick m, Cmd.none)
         _ -> (m, Cmd.none)
@@ -57,10 +49,32 @@ handleSelectNextErosion model sourceFrameId =
             if frameId /= sourceFrameId then
                 (model, Cmd.none)
             else
-                case selectErosion timeline of
-                    Err s -> (Error s, Cmd.none)
-                    Ok cmd -> (model, cmd)
+                (model, selectErosion timeline)
+        _ -> (model, Cmd.none)
 
+handlePlanErosion : Model -> List Event -> Uuid.Uuid -> (Model, Cmd Msg)
+handlePlanErosion model events frameId =
+    let (frameDuration, erodeEvents) = toErodeEvents 0 events
+    in
+        (showEvents model erodeEvents frameId, Cmd.batch [planErosion erodeEvents frameId, waitTillTheEndOfFrame frameDuration frameId])
+
+planErosion : List ErodeEvent -> Uuid.Uuid -> Cmd Msg
+planErosion events frameId =
+    let mkCmd = \e ->
+                Process.sleep (toFloat e.startAt) |> Task.perform (always (Erode e.event frameId))
+        cmds = List.map mkCmd events
+    in
+        Cmd.batch cmds
+
+
+handleErode : Model -> Event -> Uuid.Uuid -> (Model, Cmd Msg)
+handleErode model event currentFrameId =
+    case model of
+        Showing {frameId} ->
+            if currentFrameId /= frameId then
+                (model, Cmd.none)
+            else
+                (model, jsErode event)
         _ -> (model, Cmd.none)
 
 --
@@ -86,19 +100,12 @@ rollBack showed =
 --
 --
 
-showEvent : Model -> Event -> Uuid.Uuid -> Model
-showEvent m e fId =
+showEvents : Model -> List ErodeEvent -> Uuid.Uuid -> Model
+showEvents m events fId =
     case m of
         Waiting {timeline} ->
             Showing { timeline = timeline
-                    , showed = [e]
-                    , event = e
-                    , frameId = fId}
-        Showing {showed, timeline} ->
-            Showing { timeline = timeline
-                    -- FIXME - add class should not be added to the list of rolled back elements
-                    , showed = e :: showed
-                    , event = e
+                    , events = events
                     , frameId = fId}
         _ -> Error "Cannot show event from this state"
 

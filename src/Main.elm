@@ -84,11 +84,17 @@ update msg model =
     --
     SelectNextErosion frameId ->
         handleSelectNextErosion model frameId
+
+    --
+    -- Plan erosion frame
+    --
+    PlanErosion (events, frameId) ->
+        handlePlanErosion model events frameId
     --
     -- eroding
     --
-    Erode (e, frameId) ->
-        (showEvent model e frameId, Cmd.batch [jsErode e, waitTillTheEndOfEvent e frameId])
+    Erode event frameId ->
+        handleErode model event frameId
 
     UserInput ->
         (wait model, handleUserInput model)
@@ -151,8 +157,8 @@ viewTimeline model =
     Waiting {counter} ->
         text ("waiting " ++ (String.fromInt counter))
 
-    Showing {event} ->
-        text <| "showing " ++ (getLabel event)
+    Showing {events} ->
+        text <| "showing " ++ (String.join ", " <| List.map getLabel <| List.map (\x -> x.event) events)
 
     Error msg ->
         text <| "ERROR: " ++ msg

@@ -93,6 +93,21 @@ getLabel e =
         (AddClass acd) -> acd.label
         (Assemblage ad) -> ad.label
 
+getDelay : Event -> Int
+getDelay e =
+    case e of
+        (ShowVideo vd) -> vd.delayed
+        (ShowImage id) -> id.delayed
+        (ShowText td) -> td.delayed
+        (AddClass acd) -> acd.delayed
+        (Assemblage ad) -> 0
+
+getAssemblageDuration : AssemblageData -> Int
+getAssemblageDuration ad =
+    let durs = List.map (withDefault 0) <| List.map getDuration ad.events
+        dels = List.map getDelay ad.events
+    in
+        withDefault 0 <| List.maximum <| List.map2 (+) durs dels
 
 getDuration : Event -> Maybe Int
 getDuration e =
@@ -101,7 +116,7 @@ getDuration e =
         (ShowImage id) -> Just id.duration
         (ShowText td) -> Just td.duration
         (AddClass acd) -> Nothing
-        (Assemblage ad) -> Just <| List.sum <| List.map (withDefault 0) <| List.map getDuration ad.events
+        (Assemblage ad) -> Just <| getAssemblageDuration ad
 
 getType : Event -> String
 getType e =
