@@ -146,19 +146,22 @@ viewTimeline : Model -> Html Msg
 viewTimeline model =
   case model of
     ErrorLoadTimeline s ->
-      div []
+      div [style "display" "hidden"]
         [ text "error loading timeline"
         , button [ onClick LoadTimeline ] [ text "Try Again!" ]
         ]
 
     LoadingTimeline ->
-      text "Loading timeline..."
+      div [style "display" "hidden"]
+          [text "Loading timeline..."]
 
     Waiting {counter} ->
-        text ("waiting " ++ (String.fromInt counter))
+        div [style "display" "hidden"]
+            [text ("waiting " ++ (String.fromInt counter))]
 
     Showing {events} ->
-        text <| "showing " ++ (String.join ", " <| List.map getLabel <| List.map (\x -> x.event) events)
+        div [style "display" "hidden"]
+            [text <| "showing " ++ (String.join ", " <| List.map getLabel <| List.map (\x -> x.event) events)]
 
     Error msg ->
         text <| "ERROR: " ++ msg
