@@ -44,9 +44,9 @@ main =
 --     | Text String
 --     | Image String
 
-init : () -> (Model, Cmd Msg)
-init _ =
-  (LoadingTimeline, getTimeline)
+init : String -> (Model, Cmd Msg)
+init timelineUrl =
+  (LoadingTimeline, getTimeline timelineUrl)
 
 
 -- randomEvent : List Event -> Random.Generator (Maybe Event)
@@ -69,8 +69,8 @@ update msg model =
     --
     -- loading timeline
     --
-    LoadTimeline ->
-      (LoadingTimeline, getTimeline)
+    -- LoadTimeline ->
+    --   (LoadingTimeline, getTimeline)
 
     GotTimeline result ->
       case result of
@@ -147,9 +147,7 @@ viewTimeline model =
   case model of
     ErrorLoadTimeline s ->
       div [style "display" "hidden"]
-        [ text "error loading timeline"
-        , button [ onClick LoadTimeline ] [ text "Try Again!" ]
-        ]
+        [ text "error loading timeline"]
 
     LoadingTimeline ->
       div [style "display" "hidden"]

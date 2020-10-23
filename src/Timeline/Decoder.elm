@@ -94,9 +94,9 @@ timelineDecoder =
 --
 --
 
-getTimeline : Cmd Msg
-getTimeline =
+getTimeline : String -> Cmd Msg
+getTimeline timelineUrl =
   Http.get
-    { url = "https://dev.eeefff.org/data/outsourcing-paradise-parasite/erosion-machine-timeline.json"
+    { url = timelineUrl
     , expect = Http.expectJson GotTimeline timelineDecoder
     }

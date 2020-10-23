@@ -19,8 +19,7 @@ type Model
 
 -- UPDATE
 type Msg
-  = LoadTimeline
-  | GotTimeline (Result Http.Error Timeline)
+  = GotTimeline (Result Http.Error Timeline)
   | SelectNextErosion Uuid.Uuid
   | PlanErosion (List Event, Uuid.Uuid)
   | Erode Event Uuid.Uuid
