@@ -13,8 +13,11 @@ import * as jQuery from 'jquery';
 // import * as cljs from 'bundle';
 // import * as erosionMachine from "./cljs-bundle/index.js";
 
+const timelineUrl = document.getElementById('timeline-url').value;
+
 const erosionMachine = Elm.Main.init({
-  node: document.getElementById('root')
+  node: document.getElementById('root'),
+  flags: timelineUrl
 });
 
 // erosionMachine.hello_world.core.init();
