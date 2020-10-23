@@ -21,8 +21,18 @@
 
 DEST_DIR = '../erosion-machine-tester/content_scripts/'
 
+# install production files to ff plugin
 def install src_file_path, dst_file_name
+  STDERR.puts "installing #{src_file_path} -> #{DEST_DIR}/#{dst_file_name}"
+
   `cp #{src_file_path} #{DEST_DIR}/#{dst_file_name}`
+end
+
+# build production ready js files
+def elm_app_build
+  STDERR.puts "running elm-app build"
+
+  `elm-app build`
 end
 
 guard :shell do
@@ -41,4 +51,9 @@ guard :shell do
   #
   watch(/build\/static\/js\/main.+chunk\.js$/) {|m|  install m[0], 'main-chunk.js'}
 
+  #
+  # elm-app build rules
+  #
+  watch(/src\/.+\.js$/) { |m| elm_app_build }
+  watch(/src\/.+\.elm$/) { |m| elm_app_build }
 end
