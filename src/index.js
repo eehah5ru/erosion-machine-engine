@@ -6,6 +6,7 @@ var _ = require("lodash");
 
 import * as _invoke from "lodash.invoke";
 import * as jQuery from 'jquery';
+
 // import * as $visible from 'jquery-visible';
 // var jVisible = require('jquery-visible');
 
@@ -146,19 +147,47 @@ jQuery.fn.random = function() {
 // END OF JQUERY PLUGINS
 //
 
+//
+// check if element is in the eroded branch or in the erosion branch of els;
+//
+function isErodedBranch(e) {
+  if (jQuery(e).is(":root")) {
+    return false;
+  }
+
+  if (jQuery(e).hasClass('erosion')) {
+    return true;
+  }
+
+  if (jQuery(e).hasClass('eroded')) {
+    return true;
+  }
+
+  return isErodedBranch(jQuery(e).parent());
+}
+
+//
+// get target element for the erosion
+//
 function getTarget() {
   const log = _.partial(console.log, `[getTarget`);
 
-  let findFn = _.chain(["deepest", "deepest", "find", "find"]).shuffle().head().value();
+  // deepest the most of time
+  // let findFn = _.chain(["deepest", "deepest", "deepest", "find"]).shuffle().head().value();
+
+  // log("using", findFn);
 
   // TODO: tell elm if there is not any elements to erode
   // TODO: do not erode erosion elements added by jsErode func
-  return _.invoke(jQuery(document), 'find', "article *:not(.eroded)")
+  let q = jQuery("* :not(.eroded)");
+
+
+  return q
     .filter(function() {
-      return !jQuery(this).hasClass('erosion');
+      return !isErodedBranch(this);
     })
     .filter(function() {
-      return jQuery(this).visible(true);
+      return jQuery(this).visible(true, true);
     })
     .random();
 };
@@ -172,6 +201,11 @@ function erode(el) {
   log('element', el);
 
   var target = getTarget();
+
+  if (target.length == 0) {
+    error("there are no targets");
+    throw "there are no targets";
+  }
 
   jQuery(target).attr("data-replaced-with", el.id);
 
@@ -340,8 +374,12 @@ erosionMachine.ports.jsShowVideo.subscribe(function(videoData) {
     }
   }
 
-  erode(e);
-  playVideo(e);
+  try {
+    erode(e);
+    playVideo(e);
+  } catch (err) {
+    error("eroding error: ", err);
+  }
 });
 
 //
@@ -349,12 +387,18 @@ erosionMachine.ports.jsShowVideo.subscribe(function(videoData) {
 //
 erosionMachine.ports.jsShowImage.subscribe(function(imageData) {
   const log = _.partial(console.log, '[showImage]');
+  const error = _.partial(console.error, '[showImage]');
+
   log('data', imageData);
 
   let e = createBaseErosionElement('img', imageData);
   e.src = _.get(imageData, 'src', '');
 
-  erode(e);
+  try {
+    erode(e);
+  } catch (err) {
+    error("eroding error: ", err);
+  }
 });
 
 //
@@ -362,9 +406,18 @@ erosionMachine.ports.jsShowImage.subscribe(function(imageData) {
 //
 erosionMachine.ports.jsShowText.subscribe(function(textData) {
   const log = _.partial(console.log, '[showText]');
+  const error = _.partial(console.error, '[showText]');
+
   log('data', textData);
 
-  erode(stubElement(textData));
+  let e = createBaseErosionElement('span', textData);
+  e.textContent = textData.text;
+
+  try {
+    erode(e);
+  } catch (err) {
+    error("eroding error: ", err);
+  }
 });
 
 //
@@ -373,12 +426,17 @@ erosionMachine.ports.jsShowText.subscribe(function(textData) {
 // FIXME: implement actual logic!
 erosionMachine.ports.jsAddClass.subscribe(function(addClassData) {
   const log = _.partial(console.log, '[addClass]');
+  const error = _.partial(console.error, '[addClass]');
   log('data', addClassData);
 
   let e = stubElement(addClassData);
   jQuery(e).addClass("erosion");
 
-  erode(e);
+  try {
+    erode(e);
+  } catch (err) {
+    error("eroding error: ", err);
+  }
 });
 
 //
@@ -387,6 +445,8 @@ erosionMachine.ports.jsAddClass.subscribe(function(addClassData) {
 // FIXME: remove this stub function!!!
 erosionMachine.ports.jsShowAssemblage.subscribe(function(aId) {
   const log = _.partial(console.log, '[showAssemblage]');
+  const error = _.partial(console.error, '[showAssemblage]');
+
   log('id', aId);
 
   let data = {id: aId, class: aId};
@@ -394,7 +454,11 @@ erosionMachine.ports.jsShowAssemblage.subscribe(function(aId) {
   let e = stubElement(data);
   jQuery(e).addClass("erosion");
 
-  erode(e);
+  try {
+    erode(e);
+  } catch (err) {
+    error("eroding error: ", err);
+  }
 });
 
 
