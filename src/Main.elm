@@ -138,7 +138,7 @@ subscriptions model =
 -- VIEW
 view : Model -> Html Msg
 view model =
-  div []
+  div [ style "display" "none"]
     [ viewTimeline model ]
 
 
@@ -146,19 +146,19 @@ viewTimeline : Model -> Html Msg
 viewTimeline model =
   case model of
     ErrorLoadTimeline s ->
-      div [style "display" "hidden"]
+      div []
         [ text "error loading timeline"]
 
     LoadingTimeline ->
-      div [style "display" "hidden"]
+      div []
           [text "Loading timeline..."]
 
     Waiting {counter} ->
-        div [style "display" "hidden"]
+        div []
             [text ("waiting " ++ (String.fromInt counter))]
 
     Showing {events} ->
-        div [style "display" "hidden"]
+        div []
             [text <| "showing " ++ (String.join ", " <| List.map getLabel <| List.map (\x -> x.event) events)]
 
     Error msg ->
