@@ -482,7 +482,7 @@ function runErosionMachine() {
     jQuery(".subtitle-box").remove();
 
     _.each(erodedIds, function(eId) {
-      jQuery(`#${eId}`).remove();
+      jQuery(`.${eId}`).remove();
 
       const e = jQuery(`[data-replaced-with='${eId}']`);
       e.removeClass("eroded");
