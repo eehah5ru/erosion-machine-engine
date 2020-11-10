@@ -30,6 +30,7 @@ assemblageDecoder =
 
 eventDecoder : Decoder Event
 eventDecoder = D.oneOf [ event "assemblage" assemblageDecoder
+                        , event "chapter" chapterDecoder
                         , event "showVideo" showVideoDecoder
                         , event "showImage" showImageDecoder
                         , event "showText" showTextDecoder
@@ -38,6 +39,12 @@ eventDecoder = D.oneOf [ event "assemblage" assemblageDecoder
 eventsDecoder : Decoder (List Event)
 eventsDecoder =
     field "timeline" (D.list eventDecoder)
+
+chapterDecoder : Decoder Event
+chapterDecoder =
+    fromData Chapter <| (D.succeed ChapterData
+        |> required "label" string
+        |> required "events" (D.list (D.lazy (\ _ -> eventDecoder))))
 
 showVideoDecoder : Decoder Event
 showVideoDecoder =

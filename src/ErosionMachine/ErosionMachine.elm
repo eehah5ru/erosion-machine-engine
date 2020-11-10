@@ -15,12 +15,39 @@ import ErosionMachine.Ports exposing (..)
 
 
 --
+--
 -- cmd helpers
 --
+--
+
+--
+-- shufle timeline utils
+--
+
+type ShuffledEvent = SingleEvent Event
+                   | ListOfEvents (List Event)
+
+shuffleEvent : Event -> Random.Generator (ShuffledEvent)
+shuffleEvent e =
+    case e of
+        Chapter cd -> Random.map ListOfEvents (shuffle cd.events)
+        _ -> Random.map SingleEvent (Random.constant e)
+
+foldEventGenerators : Random.Generator ShuffledEvent -> Random.Generator (List Event) -> Random.Generator (List Event)
+foldEventGenerators rEv rEvs =
+    Random.map2 (\ ev evs ->
+                case ev of
+                    SingleEvent e -> e :: evs
+                    ListOfEvents es -> List.concat [es, evs]) rEv rEvs
+
+
+deepShuffle : List Event -> Random.Generator (List Event)
+deepShuffle events =
+    List.foldl foldEventGenerators (Random.constant []) <| List.map shuffleEvent events
 
 selectErosion : Timeline -> Cmd Msg
 selectErosion timeline =
-    Random.generate PlanErosion <| Random.map2 Tuple.pair (shuffle timeline.events) (Uuid.uuidGenerator)
+    Random.generate PlanErosion <| Random.map2 Tuple.pair (Random.andThen deepShuffle <| shuffle timeline.events) (Uuid.uuidGenerator)
 
 waitTillTheEndOfFrame : Int -> Uuid.Uuid -> Cmd Msg
 waitTillTheEndOfFrame delay frameId =
@@ -87,8 +114,8 @@ jsErode e =
         ShowImage id -> jsShowImage id
         ShowText td -> jsShowText td
         AddClass acd -> jsAddClass acd
-        -- FIXME: replace with actual logic
-        Assemblage ad -> jsShowAssemblage ad.label
+        Assemblage _ -> Cmd.none
+        Chapter cs -> Cmd.none
 
 rollBack : List Event -> Cmd Msg
 rollBack showed =

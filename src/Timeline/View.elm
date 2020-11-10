@@ -42,3 +42,4 @@ doRenderEvent e =
         ShowText td -> text "text"
         AddClass acd -> text "add_class"
         Assemblage ad -> text "assemblage"
+        Chapter _ -> text "chapter"

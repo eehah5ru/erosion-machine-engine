@@ -57,12 +57,18 @@ type alias AssemblageData =
     , events : List Event
     }
 
+type alias ChapterData =
+    { label : String
+    , events : List Event
+    }
+
 type Event
     = ShowVideo VideoData
     | ShowImage ImageData
     | ShowText TextData
     | AddClass AddClassData
     | Assemblage AssemblageData
+    | Chapter ChapterData
 
 -- type alias Event =
 --     { eventType : String
@@ -92,6 +98,7 @@ getLabel e =
         (ShowText td) -> td.label
         (AddClass acd) -> acd.label
         (Assemblage ad) -> ad.label
+        (Chapter cd) -> cd.label
 
 getDelay : Event -> Int
 getDelay e =
@@ -101,6 +108,7 @@ getDelay e =
         (ShowText td) -> td.delayed
         (AddClass acd) -> acd.delayed
         (Assemblage ad) -> 0
+        (Chapter _) -> 0
 
 getAssemblageDuration : AssemblageData -> Int
 getAssemblageDuration ad =
@@ -108,6 +116,10 @@ getAssemblageDuration ad =
         dels = List.map getDelay ad.events
     in
         withDefault 0 <| List.maximum <| List.map2 (+) durs dels
+
+getChapterDuration : ChapterData -> Int
+getChapterDuration cd =
+    List.sum <| List.map (withDefault 0) <| List.map getDuration cd.events
 
 getDuration : Event -> Maybe Int
 getDuration e =
@@ -117,6 +129,7 @@ getDuration e =
         (ShowText td) -> Just td.duration
         (AddClass acd) -> Nothing
         (Assemblage ad) -> Just <| getAssemblageDuration ad
+        (Chapter cd) -> Just <| getChapterDuration cd
 
 getType : Event -> String
 getType e =
@@ -126,6 +139,7 @@ getType e =
         (ShowText td) -> "show_text"
         (AddClass acd) -> "add_class"
         (Assemblage ad) -> "assemblage"
+        (Chapter _) -> "chapter"
 
 getId : Event -> String
 getId e =
@@ -135,6 +149,7 @@ getId e =
         (ShowText td) -> td.id
         (AddClass acd) -> acd.id
         (Assemblage ad) -> ad.label
+        (Chapter cd) -> cd.label
 
 
 -- type alias G1 = { name : String }
