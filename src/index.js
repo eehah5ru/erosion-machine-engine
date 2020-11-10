@@ -3,38 +3,34 @@ import { Elm } from './Main.elm';
 import * as serviceWorker from './serviceWorker';
 // import _ from 'lodash';
 var _ = require("lodash");
+var jQuery = require("jquery");
 
 import * as _invoke from "lodash.invoke";
-import * as jQuery from 'jquery';
+// import * as jQuery from 'jquery';
 
 // import * as $visible from 'jquery-visible';
 // var jVisible = require('jquery-visible');
 
-// import * as cljs from 'bundle';
-// import * as erosionMachine from "./cljs-bundle/index.js";
+//
+//
+// DEBUG DEPS
+//
+//
+console.log("[erosion-deps] jquery ==", jQuery);
+console.log("[erosion-deps] _ ==", _);
+console.log("[erosion-deps] Elm ==", Elm);
 
-const timelineUrl = document.getElementById('timeline-url').value;
-
-const erosionMachine = Elm.Main.init({
-  node: document.getElementById('root'),
-  flags: timelineUrl
-});
-
-// erosionMachine.hello_world.core.init();
-
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorker.unregister();
 
 //
 // jquery random plugin
 //
-
-jQuery.fn.random = function() {
+(function ($) {
+  $.fn.random = function() {
     var randomIndex = Math.floor(Math.random() * this.length);
     return jQuery(this[randomIndex]);
-};
+  };
+})(jQuery);
+
 
 //
 // jquery deepest plugin
@@ -309,182 +305,201 @@ function stubElement(stubData) {
 
 //
 //
-// incoming ports
+// END OF UTILS
 //
 //
 
 //
-// show video
 //
-erosionMachine.ports.jsShowVideo.subscribe(function(videoData) {
-  const log = _.partial(console.log, `[showVideo/${videoData.id}]`);
-  const error = _.partial(console.error, `[showVideo/${videoData.id}]`);
-
-  log('data', videoData);
-
-  let e = createBaseErosionElement('video', videoData);
-
-  e.loop = _.get(videoData, 'loop', 'false');
-  e.preload = 'auto';
-  e.crossOrigin = 'anonymous';
-
-  let sourceElement = document.createElement('source');
-  sourceElement.src = _.get(videoData, 'urlMP4', '');
-  sourceElement.type = 'video/mp4';
-  jQuery(sourceElement).addClass('erosion');
-
-  try {
-    e.appendChild(sourceElement);
-  } catch (err) {
-    error('error adding source element', err);
-    throw err;
-  }
-
-  if (_.has(videoData, 'subtitlesEn')) {
-    let track = _.merge(document.createElement('track'),
-                        {
-                          kind: 'metadata',
-                          label: 'English subtitles',
-                          src: videoData.subtitlesEn,
-                          srcLang: 'en',
-                          default: true
-                        });
-
-    jQuery(track).addClass('erosion');
-    try {
-      e.appendChild(track);
-    } catch (err) {
-      error('error adding track element', err);
-      throw err;
-    }
-  }
-
-  if (_.has(videoData, 'subtitlesRu')) {
-    let track = _.merge(document.createElement('track'),
-                        {
-                          kind: 'metadata',
-                          label: 'Russian subtitles',
-                          src: videoData.subtitlesRu,
-                          srcLang: 'ru'
-                        });
-    jQuery(track).addClass('erosion');
-
-    try {
-      e.appendChild(track);
-    } catch (err) {
-      error('error adding track element', err);
-      throw err;
-    }
-  }
-
-  try {
-    erode(e);
-    playVideo(e);
-  } catch (err) {
-    error("eroding error: ", err);
-  }
-});
-
+// EROSION MACHINE RUNNER
 //
-// show image
 //
-erosionMachine.ports.jsShowImage.subscribe(function(imageData) {
-  const log = _.partial(console.log, '[showImage]');
-  const error = _.partial(console.error, '[showImage]');
+function runErosionMachine() {
+  //
+  // setup
+  //
 
-  log('data', imageData);
+  console.log("[runErosionMachine] starting");
 
-  let e = createBaseErosionElement('img', imageData);
-  e.src = _.get(imageData, 'src', '');
+  const timelineUrl = document.getElementById('timeline-url').value;
 
-  try {
-    erode(e);
-  } catch (err) {
-    error("eroding error: ", err);
-  }
-});
-
-//
-// show text
-//
-erosionMachine.ports.jsShowText.subscribe(function(textData) {
-  const log = _.partial(console.log, '[showText]');
-  const error = _.partial(console.error, '[showText]');
-
-  log('data', textData);
-
-  let e = createBaseErosionElement('span', textData);
-  e.textContent = textData.text;
-
-  try {
-    erode(e);
-  } catch (err) {
-    error("eroding error: ", err);
-  }
-});
-
-//
-// add class
-//
-// FIXME: implement actual logic!
-erosionMachine.ports.jsAddClass.subscribe(function(addClassData) {
-  const log = _.partial(console.log, '[addClass]');
-  const error = _.partial(console.error, '[addClass]');
-  log('data', addClassData);
-
-  let e = stubElement(addClassData);
-  jQuery(e).addClass("erosion");
-
-  try {
-    erode(e);
-  } catch (err) {
-    error("eroding error: ", err);
-  }
-});
-
-//
-// show assemblage
-//
-// FIXME: remove this stub function!!!
-// erosionMachine.ports.jsShowAssemblage.subscribe(function(aId) {
-//   const log = _.partial(console.log, '[showAssemblage]');
-//   const error = _.partial(console.error, '[showAssemblage]');
-
-//   log('id', aId);
-
-//   let data = {id: aId, class: aId};
-
-//   let e = stubElement(data);
-//   jQuery(e).addClass("erosion");
-
-//   try {
-//     erode(e);
-//   } catch (err) {
-//     error("eroding error: ", err);
-//   }
-// });
-
-
-
-
-
-//
-// jsRollBack : elm port
-//
-erosionMachine.ports.jsRollBack.subscribe(function(erodedIds) {
-  const log = _.partial(console.log, '[roll-back]');
-
-  log('ids to roll back', erodedIds);
-
-  // remove subtitles
-  jQuery(".subtitle-box").remove();
-
-  _.each(erodedIds, function(eId) {
-    jQuery(`#${eId}`).remove();
-
-    const e = jQuery(`[data-replaced-with='${eId}']`);
-    e.removeClass("eroded");
-    e.removeAttr("data-replaced-with");
-    e.show();
+  const erosionMachine = Elm.Main.init({
+    node: document.getElementById('root'),
+    flags: timelineUrl
   });
-});
+
+
+  // If you want your app to work offline and load faster, you can change
+  // unregister() to register() below. Note this comes with some pitfalls.
+  // Learn more about service workers: https://bit.ly/CRA-PWA
+  serviceWorker.unregister();
+
+  //
+  //
+  // incoming ports
+  //
+  //
+
+  //
+  // show video
+  //
+  erosionMachine.ports.jsShowVideo.subscribe(function(videoData) {
+    const log = _.partial(console.log, `[showVideo/${videoData.id}]`);
+    const error = _.partial(console.error, `[showVideo/${videoData.id}]`);
+
+    log('data', videoData);
+
+    let e = createBaseErosionElement('video', videoData);
+
+    e.loop = _.get(videoData, 'loop', 'false');
+    e.preload = 'auto';
+    e.crossOrigin = 'anonymous';
+
+    let sourceElement = document.createElement('source');
+    sourceElement.src = _.get(videoData, 'urlMP4', '');
+    sourceElement.type = 'video/mp4';
+    jQuery(sourceElement).addClass('erosion');
+
+    try {
+      e.appendChild(sourceElement);
+    } catch (err) {
+      error('error adding source element', err);
+      throw err;
+    }
+
+    if (_.has(videoData, 'subtitlesEn')) {
+      let track = _.merge(document.createElement('track'),
+                          {
+                            kind: 'metadata',
+                            label: 'English subtitles',
+                            src: videoData.subtitlesEn,
+                            srcLang: 'en',
+                            default: true
+                          });
+
+      jQuery(track).addClass('erosion');
+      try {
+        e.appendChild(track);
+      } catch (err) {
+        error('error adding track element', err);
+        throw err;
+      }
+    }
+
+    if (_.has(videoData, 'subtitlesRu')) {
+      let track = _.merge(document.createElement('track'),
+                          {
+                            kind: 'metadata',
+                            label: 'Russian subtitles',
+                            src: videoData.subtitlesRu,
+                            srcLang: 'ru'
+                          });
+      jQuery(track).addClass('erosion');
+
+      try {
+        e.appendChild(track);
+      } catch (err) {
+        error('error adding track element', err);
+        throw err;
+      }
+    }
+
+    try {
+      erode(e);
+      playVideo(e);
+    } catch (err) {
+      error("eroding error: ", err);
+    }
+  });
+
+  //
+  // show image
+  //
+  erosionMachine.ports.jsShowImage.subscribe(function(imageData) {
+    const log = _.partial(console.log, '[showImage]');
+    const error = _.partial(console.error, '[showImage]');
+
+    log('data', imageData);
+
+    let e = createBaseErosionElement('img', imageData);
+    e.src = _.get(imageData, 'src', '');
+
+    try {
+      erode(e);
+    } catch (err) {
+      error("eroding error: ", err);
+    }
+  });
+
+  //
+  // show text
+  //
+  erosionMachine.ports.jsShowText.subscribe(function(textData) {
+    const log = _.partial(console.log, '[showText]');
+    const error = _.partial(console.error, '[showText]');
+
+    log('data', textData);
+
+    let e = createBaseErosionElement('span', textData);
+    e.textContent = textData.text;
+
+    try {
+      erode(e);
+    } catch (err) {
+      error("eroding error: ", err);
+    }
+  });
+
+  //
+  // add class
+  //
+  // FIXME: implement actual logic!
+  erosionMachine.ports.jsAddClass.subscribe(function(addClassData) {
+    const log = _.partial(console.log, '[addClass]');
+    const error = _.partial(console.error, '[addClass]');
+    log('data', addClassData);
+
+    let e = stubElement(addClassData);
+    jQuery(e).addClass("erosion");
+
+    try {
+      erode(e);
+    } catch (err) {
+      error("eroding error: ", err);
+    }
+  });
+
+
+  //
+  // jsRollBack : elm port
+  //
+  erosionMachine.ports.jsRollBack.subscribe(function(erodedIds) {
+    const log = _.partial(console.log, '[roll-back]');
+
+    log('ids to roll back', erodedIds);
+
+    // remove subtitles
+    jQuery(".subtitle-box").remove();
+
+    _.each(erodedIds, function(eId) {
+      jQuery(`#${eId}`).remove();
+
+      const e = jQuery(`[data-replaced-with='${eId}']`);
+      e.removeClass("eroded");
+      e.removeAttr("data-replaced-with");
+      e.show();
+    });
+  });
+
+  console.log("[runErosionMachine] done");
+}
+
+if ( document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll) ) {
+  runErosionMachine();
+} else {
+  document.addEventListener('readystatechange', event => {
+    if (event.target.readyState === 'complete') {
+      runErosionMachine();
+    }
+  });
+}
