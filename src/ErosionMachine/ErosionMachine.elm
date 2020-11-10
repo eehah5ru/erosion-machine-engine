@@ -49,9 +49,13 @@ selectErosion : Timeline -> Cmd Msg
 selectErosion timeline =
     Random.generate PlanErosion <| Random.map2 Tuple.pair (Random.andThen deepShuffle <| shuffle timeline.events) (Uuid.uuidGenerator)
 
+--
+-- wait till the end of timeline and re-schedule shuffled timeline events
+--
 waitTillTheEndOfFrame : Int -> Uuid.Uuid -> Cmd Msg
 waitTillTheEndOfFrame delay frameId =
     Process.sleep (toFloat delay) |> Task.perform (always (SelectNextErosion frameId))
+
 handleUserInput : Model -> Cmd Msg
 handleUserInput m =
     case m of
@@ -85,6 +89,9 @@ handlePlanErosion model events frameId =
     in
         (showEvents model erodeEvents frameId, Cmd.batch [planErosion erodeEvents frameId, waitTillTheEndOfFrame frameDuration frameId])
 
+--
+-- schedule erosion events from the timeline
+--
 planErosion : List ErodeEvent -> Uuid.Uuid -> Cmd Msg
 planErosion events frameId =
     let mkCmd = \e ->
@@ -134,6 +141,10 @@ showEvents m events fId =
             Showing { timeline = timeline
                     , events = events
                     , frameId = fId}
+        Showing {timeline} ->
+            Showing { timeline = timeline
+                    , events = events
+                    , frameId = fId }
         _ -> Error "Cannot show event from this state"
 
 --
@@ -148,7 +159,7 @@ wait m =
         Waiting{timeline} ->
             Waiting { timeline = timeline
                     , counter = 0}
-        _ -> Error "Cannot wait from this state"
+        _ -> m -- Error "Cannot wait from this state"
 
 tick : Model -> Model
 tick m =
