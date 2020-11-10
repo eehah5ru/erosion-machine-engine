@@ -446,23 +446,23 @@ erosionMachine.ports.jsAddClass.subscribe(function(addClassData) {
 // show assemblage
 //
 // FIXME: remove this stub function!!!
-erosionMachine.ports.jsShowAssemblage.subscribe(function(aId) {
-  const log = _.partial(console.log, '[showAssemblage]');
-  const error = _.partial(console.error, '[showAssemblage]');
+// erosionMachine.ports.jsShowAssemblage.subscribe(function(aId) {
+//   const log = _.partial(console.log, '[showAssemblage]');
+//   const error = _.partial(console.error, '[showAssemblage]');
 
-  log('id', aId);
+//   log('id', aId);
 
-  let data = {id: aId, class: aId};
+//   let data = {id: aId, class: aId};
 
-  let e = stubElement(data);
-  jQuery(e).addClass("erosion");
+//   let e = stubElement(data);
+//   jQuery(e).addClass("erosion");
 
-  try {
-    erode(e);
-  } catch (err) {
-    error("eroding error: ", err);
-  }
-});
+//   try {
+//     erode(e);
+//   } catch (err) {
+//     error("eroding error: ", err);
+//   }
+// });
 
 
 
