@@ -108,19 +108,19 @@ handleErode model event currentFrameId =
             if currentFrameId /= frameId then
                 (model, Cmd.none)
             else
-                (model, jsErode event)
+                (model, jsErode event frameId)
         _ -> (model, Cmd.none)
 
 --
 -- port helpers
 --
-jsErode : Event -> Cmd Msg
-jsErode e =
+jsErode : Event -> Uuid.Uuid -> Cmd Msg
+jsErode e frameId =
     case e of
-        ShowVideo vd -> jsShowVideo vd
-        ShowImage id -> jsShowImage id
-        ShowText td -> jsShowText td
-        AddClass acd -> jsAddClass acd
+        ShowVideo vd -> jsShowVideo {vd | id = vd.id ++ (Uuid.toString frameId)}
+        ShowImage iData -> jsShowImage {iData | id = iData.id ++ (Uuid.toString frameId)}
+        ShowText td -> jsShowText {td | id = td.id ++ (Uuid.toString frameId)}
+        AddClass acd -> jsAddClass {acd | id = acd.id ++ (Uuid.toString frameId)}
         Assemblage _ -> Cmd.none
         Chapter cs -> Cmd.none
 
