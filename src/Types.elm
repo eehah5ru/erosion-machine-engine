@@ -51,7 +51,7 @@ toErodeEvent offset event =
     case event of
         Assemblage ad ->
             let dur = Maybe.withDefault 0 <| getDuration event
-                mkF = \e -> ErodeEvent e offset (offset + (getDelay e))
+                mkF = \e -> ErodeEvent e (offset + (getDelay e)) (offset + (getDelay e) + (Maybe.withDefault 0 <| getDuration e))
                 erodeEvents = List.map mkF ad.events
             in
                 (offset + dur, erodeEvents)
