@@ -4,6 +4,8 @@ import * as serviceWorker from './serviceWorker';
 // import _ from 'lodash';
 var _ = require("lodash");
 var jQuery = require("jquery");
+import canAutoPlay from 'can-autoplay';
+// var canAutoplay = require("can-autoplay");
 
 import * as _invoke from "lodash.invoke";
 // import * as jQuery from 'jquery';
@@ -19,6 +21,7 @@ import * as _invoke from "lodash.invoke";
 console.log("[erosion-deps] jquery ==", jQuery);
 console.log("[erosion-deps] _ ==", _);
 console.log("[erosion-deps] Elm ==", Elm);
+console.log("[erosion-deps] canAutoplay ==", canAutoPlay);
 
 
 //
@@ -169,7 +172,7 @@ function isErodedBranch(e) {
 // get target element for the erosion
 //
 function getTarget() {
-  const log = _.partial(console.log, `[getTarget`);
+  const log = _.partial(console.log, `[getTarget]`);
 
   // deepest the most of time
   // let findFn = _.chain(["deepest", "deepest", "deepest", "find"]).shuffle().head().value();
@@ -178,15 +181,32 @@ function getTarget() {
 
   // TODO: tell elm if there is not any elements to erode
   // TODO: do not erode erosion elements added by jsErode func
-  let q = jQuery("* :not(.eroded)");
+  let q = jQuery("body").find(":not(.eroded)");
 
+  // log("deepest els count: " + q.length);
 
   return q
     .filter(function() {
-      return !isErodedBranch(this);
+      if (isErodedBranch(this)) {
+        log("filtred out cuz branch is eroded");
+        return false;
+      }
+      return true;
     })
     .filter(function() {
       return jQuery(this).visible(true, true);
+    })
+    .filter(function() {
+      // filter elements by size not smaller than threshold
+      if (this.getBoundingClientRect().height < 10) {
+        log("filtred out cuz of too small height");
+        return false;
+      }
+      if (this.getBoundingClientRect().width < 10) {
+        log("filtred out cuz of too small width");
+        return false;
+      }
+      return true;
     })
     .random();
 };
@@ -197,9 +217,10 @@ function getTarget() {
 function erode(el) {
   const log = _.partial(console.log, `[erode/${el.id}]`);
   const error = _.partial(console.error, `[erode/${el.id}]`);
-  log('element', el);
+  //log('element', el);
 
   var target = getTarget();
+  //log(target.length);
 
   if (target.length == 0) {
     error("there are no targets");
@@ -212,10 +233,9 @@ function erode(el) {
 
   jQuery(target).addClass("eroded");
 
-  log('eroded element', jQuery(document).find(`article [data-replaced-with='${el.label}']`));
+  //log('eroded element', jQuery(document).find(`* [data-replaced-with='${el.label}']`));
 
   try {
-
     jQuery(el).insertAfter(jQuery(target));
   } catch (e) {
     error('error:', e);
@@ -225,8 +245,6 @@ function erode(el) {
   }
 
   jQuery(target).hide();
-
-
 }
 
 //
@@ -351,7 +369,7 @@ function runErosionMachine() {
     const log = _.partial(console.log, `[showVideo/${videoData.id}]`);
     const error = _.partial(console.error, `[showVideo/${videoData.id}]`);
 
-    log('data', videoData);
+    //log('data', videoData);
 
     let e = createBaseErosionElement('video', videoData);
 
@@ -410,7 +428,17 @@ function runErosionMachine() {
 
     try {
       erode(e);
-      playVideo(e);
+      // check need to be muted. details here https://github.com/video-dev/can-autoplay
+      canAutoPlay.video()
+        .then(({result}) => {
+          if (result === false) {
+            e.muted = true;
+          }
+        })
+        .then(() => {
+          playVideo(e);
+        });
+
     } catch (err) {
       error("eroding error: ", err);
     }
@@ -423,7 +451,7 @@ function runErosionMachine() {
     const log = _.partial(console.log, '[showImage]');
     const error = _.partial(console.error, '[showImage]');
 
-    log('data', imageData);
+    //log('data', imageData);
 
     let e = createBaseErosionElement('img', imageData);
     e.src = _.get(imageData, 'src', '');
@@ -442,7 +470,7 @@ function runErosionMachine() {
     const log = _.partial(console.log, '[showText]');
     const error = _.partial(console.error, '[showText]');
 
-    log('data', textData);
+    //log('data', textData);
 
     let e = createBaseErosionElement('span', textData);
     e.textContent = textData.text;
@@ -461,7 +489,7 @@ function runErosionMachine() {
   erosionMachine.ports.jsAddClass.subscribe(function(addClassData) {
     const log = _.partial(console.log, '[addClass]');
     const error = _.partial(console.error, '[addClass]');
-    log('data', addClassData);
+    //log('data', addClassData);
 
     var target = jQuery(`#${addClassData.id}`);
 
@@ -479,7 +507,7 @@ function runErosionMachine() {
   erosionMachine.ports.jsRollBack.subscribe(function(erodedIds) {
     const log = _.partial(console.log, '[roll-back]');
 
-    log('ids to roll back', erodedIds);
+    //log('ids to roll back', erodedIds);
 
     // remove subtitles
     jQuery(".subtitle-box").remove();
