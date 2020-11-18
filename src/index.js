@@ -206,11 +206,13 @@ function erode(el) {
     throw "there are no targets";
   }
 
-  jQuery(target).attr("data-replaced-with", el.id);
+  // using label because ids are unique for frames but we need to roll back multipe frames when we know labels only
+  // FIXME: make this process more transparent
+  jQuery(target).attr("data-replaced-with", el.label);
 
   jQuery(target).addClass("eroded");
 
-  log('eroded element', jQuery(document).find(`article [data-replaced-with='${el.id}']`));
+  log('eroded element', jQuery(document).find(`article [data-replaced-with='${el.label}']`));
 
   try {
 
@@ -286,7 +288,9 @@ function createBaseErosionElement(eType, data) {
 
   e.id = _.get(data, 'id', _.uniqueId());
   e.classList = _.get(data, 'class', '');
+  e.label = _.get(data, 'label', '');
   jQuery(e).addClass('eroded');
+  jQuery(e).addClass(_.get(data, 'label', ''));     // add label as class to use it in roll back
 
   return e;
 }
@@ -459,13 +463,12 @@ function runErosionMachine() {
     const error = _.partial(console.error, '[addClass]');
     log('data', addClassData);
 
-    let e = stubElement(addClassData);
-    jQuery(e).addClass("erosion");
+    var target = jQuery(`#${addClassData.id}`);
 
-    try {
-      erode(e);
-    } catch (err) {
-      error("eroding error: ", err);
+    target.addClass(addClassData.class);
+
+    if (target.length == 0) {
+      error("no target for " + addClassData.id);
     }
   });
 
