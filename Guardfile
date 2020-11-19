@@ -43,7 +43,7 @@ BASE_FF_PLUGIN_DIR = '../erosion-machine-tester'
 FF_PLUGIN_JS_DEST_DIR = "#{BASE_FF_PLUGIN_DIR}/content_scripts"
 
 # css
-FF_PLUGON_CSS_DEST_DIR = "#{BASE_FF_PLUGIN_DIR}/content_css"
+FF_PLUGIN_CSS_DEST_DIR = "#{BASE_FF_PLUGIN_DIR}/content_css"
 
 #
 # install production files to specified path
@@ -114,6 +114,7 @@ end
 #
 # watch eeefff.org erosion machine's css file
 # - install it to FF plugin
+# - install it for elm local dev env
 #
 # run group with -w parameter:
 # guard -g tester -w ~/it/websites/eeefff-org/_site/css
@@ -128,7 +129,13 @@ group :css do
 
       f_name = File.basename(m[0])
 
+      # write css for FF plugin
       File.open("#{FF_PLUGIN_CSS_DEST_DIR}/#{f_name}", 'w') do |f|
+        f.puts css
+      end
+
+      # write css for elm dev env
+      File.open("src/#{f_name}", 'w') do |f|
         f.puts css
       end
     }
