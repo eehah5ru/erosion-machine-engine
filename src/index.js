@@ -187,30 +187,46 @@ function getTarget() {
 
   // log("deepest els count: " + q.length);
 
-  return q
-    .filter(function() {
-      if (isErodedBranch(this)) {
-        log("filtred out cuz branch is eroded");
-        return false;
-      }
-      return true;
+  let els = q
+      .filter(function() {
+        if (isErodedBranch(this)) {
+          log("filtred out cuz branch is eroded");
+          return false;
+        }
+        return true;
+      })
+      .filter(function() {
+        return jQuery(this).visible(true, true);
+      })
+      .filter(function() {
+        // filter elements by size not smaller than threshold
+        if (this.getBoundingClientRect().height < 10) {
+          log("filtred out cuz of too small height");
+          return false;
+        }
+        if (this.getBoundingClientRect().width < 10) {
+          log("filtred out cuz of too small width");
+          return false;
+        }
+        return true;
+      })
+      .toArray();
+
+  log(`erosion possibilities: ${els.length}`);
+
+  let result =  _.chain(els)
+  // sort by squares
+    .sortBy((e) => {
+      return e.getBoundingClientRect().height * e.getBoundingClientRect().width;
     })
-    .filter(function() {
-      return jQuery(this).visible(true, true);
-    })
-    .filter(function() {
-      // filter elements by size not smaller than threshold
-      if (this.getBoundingClientRect().height < 10) {
-        log("filtred out cuz of too small height");
-        return false;
-      }
-      if (this.getBoundingClientRect().width < 10) {
-        log("filtred out cuz of too small width");
-        return false;
-      }
-      return true;
-    })
-    .random();
+  // get some smallest
+    .take(10)
+    .sample()
+    .value();
+
+  log(`eroded el's square: ${result.getBoundingClientRect().height * result.getBoundingClientRect().width}`);
+
+  return result;
 };
 
 //
