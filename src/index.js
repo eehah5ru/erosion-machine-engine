@@ -1,4 +1,6 @@
 import './main.css';
+import './erosion-machine-timeline.css';
+
 import { Elm } from './Main.elm';
 import * as serviceWorker from './serviceWorker';
 // import _ from 'lodash';
@@ -332,6 +334,26 @@ function stubElement(stubData) {
 //
 
 //
+// splash screen factory
+//
+function showSplashScreen() {
+  let e = document.createElement('div');
+
+  e.id = "op-erosion-splash-screen";
+  e.classList = 'eroded';
+
+  let h1 = document.createElement('h1');
+  h1.textContent = "enter";
+  jQuery(e).append(h1);
+  jQuery(h1).click(() => {
+    jQuery(e).hide();
+  });
+
+  jQuery("body").append(e);
+
+}
+
+//
 //
 // EROSION MACHINE RUNNER
 //
@@ -356,6 +378,7 @@ function runErosionMachine() {
   // Learn more about service workers: https://bit.ly/CRA-PWA
   serviceWorker.unregister();
 
+  showSplashScreen();
   //
   //
   // incoming ports
