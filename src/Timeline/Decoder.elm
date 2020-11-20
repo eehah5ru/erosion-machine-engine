@@ -34,7 +34,8 @@ eventDecoder = D.oneOf [ event "assemblage" assemblageDecoder
                         , event "showVideo" showVideoDecoder
                         , event "showImage" showImageDecoder
                         , event "showText" showTextDecoder
-                        , event "addClass" addClassDecoder]
+                        , event "addClass" addClassDecoder
+                        , event "hideElement" hideElementDecoder]
 
 eventsDecoder : Decoder (List Event)
 eventsDecoder =
@@ -45,6 +46,14 @@ chapterDecoder =
     fromData Chapter <| (D.succeed ChapterData
         |> required "label" string
         |> required "events" (D.list (D.lazy (\ _ -> eventDecoder))))
+
+hideElementDecoder : Decoder Event
+hideElementDecoder =
+    fromData HideElement <| (D.succeed HideElementData
+                            |> required "id" string
+                            |> required "label" string
+                            |> optional "delayed" int 0)
+
 
 showVideoDecoder : Decoder Event
 showVideoDecoder =

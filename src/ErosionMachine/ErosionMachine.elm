@@ -121,6 +121,7 @@ jsErode e frameId =
         ShowImage iData -> jsShowImage {iData | id = iData.id ++ (Uuid.toString frameId)}
         ShowText td -> jsShowText {td | id = td.id ++ (Uuid.toString frameId)}
         AddClass acd -> jsAddClass {acd | id = acd.id ++ (Uuid.toString frameId)}
+        HideElement hed -> jsHideElement hed
         Assemblage _ -> Cmd.none
         Chapter cs -> Cmd.none
 

@@ -41,5 +41,6 @@ doRenderEvent e =
         ShowImage id -> text "image"
         ShowText td -> text "text"
         AddClass acd -> text "add_class"
+        HideElement _ -> text (getType e)
         Assemblage ad -> text "assemblage"
         Chapter _ -> text "chapter"

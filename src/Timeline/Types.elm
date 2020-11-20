@@ -62,11 +62,19 @@ type alias ChapterData =
     , events : List Event
     }
 
+type alias HideElementData =
+    { label : String
+    , id : String
+    , delayed : Int
+    }
+
+
 type Event
     = ShowVideo VideoData
     | ShowImage ImageData
     | ShowText TextData
     | AddClass AddClassData
+    | HideElement HideElementData
     | Assemblage AssemblageData
     | Chapter ChapterData
 
@@ -97,6 +105,7 @@ getLabel e =
         (ShowImage id) -> id.label
         (ShowText td) -> td.label
         (AddClass acd) -> acd.label
+        (HideElement hed) -> hed.label
         (Assemblage ad) -> ad.label
         (Chapter cd) -> cd.label
 
@@ -107,6 +116,7 @@ getDelay e =
         (ShowImage id) -> id.delayed
         (ShowText td) -> td.delayed
         (AddClass acd) -> acd.delayed
+        (HideElement hed) -> hed.delayed
         (Assemblage ad) -> 0
         (Chapter _) -> 0
 
@@ -128,6 +138,7 @@ getDuration e =
         (ShowImage id) -> Just id.duration
         (ShowText td) -> Just td.duration
         (AddClass acd) -> Nothing
+        (HideElement _) -> Nothing
         (Assemblage ad) -> Just <| getAssemblageDuration ad
         (Chapter cd) -> Just <| getChapterDuration cd
 
@@ -138,6 +149,7 @@ getType e =
         (ShowImage id) -> "show_image"
         (ShowText td) -> "show_text"
         (AddClass acd) -> "add_class"
+        (HideElement _) -> "hide_element"
         (Assemblage ad) -> "assemblage"
         (Chapter _) -> "chapter"
 
@@ -148,6 +160,7 @@ getId e =
         (ShowImage id) -> id.id
         (ShowText td) -> td.id
         (AddClass acd) -> acd.id
+        (HideElement hed) -> hed.label
         (Assemblage ad) -> ad.label
         (Chapter cd) -> cd.label
 
