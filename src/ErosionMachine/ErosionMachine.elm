@@ -61,6 +61,8 @@ handleUserInput m =
     case m of
         Showing {events} ->
             rollBack <| List.map (\x -> x.event) events
+        Paused {events} ->
+            rollBack <| List.map (\x -> x.event) events
         _ -> Cmd.none
 
 handleTimeTick : Model -> (Model, Cmd Msg)
@@ -85,9 +87,11 @@ handleSelectNextErosion model sourceFrameId =
 
 handlePlanErosion : Model -> List Event -> Uuid.Uuid -> (Model, Cmd Msg)
 handlePlanErosion model events frameId =
-    let (frameDuration, erodeEvents) = toErodeEvents 0 events
-    in
-        (showEvents model erodeEvents frameId, Cmd.batch [planErosion erodeEvents frameId, waitTillTheEndOfFrame frameDuration frameId])
+    case model of
+        Paused _ -> (model, Cmd.none)
+        _ -> let (frameDuration, erodeEvents) = toErodeEvents 0 events
+             in
+                 (showEvents model erodeEvents frameId, Cmd.batch [planErosion erodeEvents frameId, waitTillTheEndOfFrame frameDuration frameId])
 
 --
 -- schedule erosion events from the timeline
@@ -111,6 +115,13 @@ handleErode model event currentFrameId =
                 (model, jsErode event frameId)
         _ -> (model, Cmd.none)
 
+
+handlePauseTimeline : Model -> (Model, Cmd Msg)
+handlePauseTimeline model =
+    case model of
+        Showing data ->
+            (Paused data, Cmd.none)
+        _ -> (model, Cmd.none)
 --
 -- port helpers
 --
@@ -157,6 +168,9 @@ wait m =
         Showing{timeline} ->
             Waiting { timeline = timeline
                     , counter = 0}
+        Paused {timeline} ->
+            Waiting { timeline = timeline
+                    , counter = 0 }
         Waiting{timeline} ->
             Waiting { timeline = timeline
                     , counter = 0}

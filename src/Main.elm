@@ -26,6 +26,7 @@ import Timeline.Types exposing (..)
 import Timeline.View
 -- import Index.View
 import ErosionMachine.ErosionMachine exposing (..)
+import ErosionMachine.Ports exposing (jsThereAreNoTargets)
 
 -- MAIN
 
@@ -102,6 +103,8 @@ update msg model =
         handleTimeTick model
     RaiseError s ->
         (Error s, Cmd.none)
+    PauseTimeline ->
+        handlePauseTimeline model
     -- RandomEventFired tl mE ->
     --     case mE of
     --         Nothing -> (Error "error getting random event" tl, Cmd.none)
@@ -125,13 +128,17 @@ timerSub : Sub Msg
 timerSub =
     Time.every 1000 (always TimeTick)
 
+thereAreNoTargetsSub : Sub Msg
+thereAreNoTargetsSub =
+    jsThereAreNoTargets (\ _ -> PauseTimeline )
+
 -- SUBSCRIPTIONS
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
         Showing _ ->
-            Sub.batch userInputSubs
-        _ -> Sub.batch <| timerSub :: userInputSubs
+            Sub.batch <| thereAreNoTargetsSub :: userInputSubs
+        _ -> Sub.batch <| thereAreNoTargetsSub :: timerSub :: userInputSubs
 
 
 
@@ -160,6 +167,9 @@ viewTimeline model =
     Showing {events} ->
         div []
             [text <| "showing " ++ (String.join ", " <| List.map getLabel <| List.map (\x -> x.event) events)]
+    Paused _ ->
+        div []
+            [text "paused"]
 
     Error msg ->
         text <| "ERROR: " ++ msg

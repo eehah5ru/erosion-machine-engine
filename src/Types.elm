@@ -16,6 +16,10 @@ type Model
     { timeline : Timeline
     , events : List ErodeEvent
     , frameId : Uuid.Uuid}
+  | Paused
+    { timeline : Timeline
+    , events : List ErodeEvent
+    , frameId : Uuid.Uuid}
 
 -- UPDATE
 type Msg
@@ -25,6 +29,7 @@ type Msg
   | Erode Event Uuid.Uuid
   | UserInput
   | TimeTick
+  | PauseTimeline
   | RaiseError String
 
 --
