@@ -224,9 +224,13 @@ function getTarget() {
     .sample()
     .value();
 
+  if (_.isNil(result)) {
+    return jQuery();
+  }
+
   log(`eroded el's square: ${result.getBoundingClientRect().height * result.getBoundingClientRect().width}`);
 
-  return result;
+  return jQuery(result);
 };
 
 //
@@ -539,6 +543,31 @@ function runErosionMachine() {
     }
   });
 
+  //
+  // hide element
+  //
+  erosionMachine.ports.jsHideElement.subscribe(function(hideElementData) {
+    const log = _.partial(console.log, '[hideElement]');
+    const error = _.partial(console.error, '[hideElement]');
+
+    log(hideElementData.label);
+
+    var target = getTarget();
+
+    // stop eroding if there are no targets found
+    if (target.length == 0) {
+      error("there are no targets");
+      return;
+    }
+
+    // using label because ids are unique for frames but we need to roll back multipe frames when we know labels only
+    // FIXME: make this process more transparent
+    jQuery(target).attr("data-replaced-with", hideElementData.label);
+    jQuery(target).addClass("eroded");
+
+    jQuery(target).hide();
+
+  });
 
   //
   // jsRollBack : elm port
