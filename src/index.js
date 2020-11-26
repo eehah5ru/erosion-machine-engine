@@ -357,7 +357,7 @@ function stubElement(stubData) {
 //
 // splash screen factory
 //
-function showSplashScreen() {
+function showSplashScreen(onClose) {
   let e = document.createElement('div');
 
   e.id = "op-erosion-splash-screen";
@@ -367,6 +367,7 @@ function showSplashScreen() {
   h1.textContent = "enter";
   jQuery(e).append(h1);
   jQuery(h1).click(() => {
+    onClose("splash screen closed");
     jQuery(e).hide();
   });
 
@@ -398,7 +399,7 @@ function runErosionMachine() {
   // Learn more about service workers: https://bit.ly/CRA-PWA
   serviceWorker.unregister();
 
-  showSplashScreen();
+  showSplashScreen(erosionMachine.ports.jsSplashScreenClosed.send);
   //
   //
   // incoming ports
@@ -424,6 +425,13 @@ function runErosionMachine() {
     let sourceElement = document.createElement('source');
     sourceElement.src = _.get(videoData, 'urlMP4', '');
     sourceElement.type = 'video/mp4';
+
+    if (_.get(videoData, 'muted', false)) {
+      e.muted = true;
+
+      warning("video gonna play muted");
+    }
+
     jQuery(sourceElement).addClass('erosion');
 
     try {
@@ -444,6 +452,7 @@ function runErosionMachine() {
                           });
 
       jQuery(track).addClass('erosion');
+
       try {
         e.appendChild(track);
       } catch (err) {
@@ -472,17 +481,8 @@ function runErosionMachine() {
 
     try {
       erode(e, erosionMachine.ports.jsThereAreNoTargets.send);
-      // check need to be muted. details here https://github.com/video-dev/can-autoplay
-      canAutoPlay.video()
-        .then(({result}) => {
-          if (result === false) {
-            warning("video gonna play muted");
-            e.muted = true;
-          }
-        })
-        .then(() => {
-          playVideo(e);
-        });
+
+      playVideo(e);
 
     } catch (err) {
       error("eroding error: ", err);
@@ -591,6 +591,19 @@ function runErosionMachine() {
       e.removeAttr("data-replaced-with");
       e.show();
     });
+  });
+
+  //
+  // jsCheckSilentAutoplay : elm port
+  //
+  erosionMachine.ports.jsCheckAutoplayStatus.subscribe(function() {
+    const log = _.partial(console.log, '[check-silent-autoplay]');
+
+    canAutoPlay.video()
+      .then(({result}) => {
+        log(`can be played with sound: ${result}`);
+        erosionMachine.ports.jsSetAutoplayStatus.send(!result);
+      });
   });
 
   console.log("[runErosionMachine] done");
