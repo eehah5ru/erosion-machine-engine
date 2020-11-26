@@ -234,9 +234,9 @@ function getTarget() {
 };
 
 //
-// jsErode : elm port
+// replace dome element with an erosion
 //
-function erode(el) {
+function erode(el, onError) {
   const log = _.partial(console.log, `[erode/${el.id}]`);
   const error = _.partial(console.error, `[erode/${el.id}]`);
   //log('element', el);
@@ -246,6 +246,7 @@ function erode(el) {
 
   if (target.length == 0) {
     error("there are no targets");
+    onError("there are no targets");
     throw "there are no targets";
   }
 
@@ -410,6 +411,7 @@ function runErosionMachine() {
   erosionMachine.ports.jsShowVideo.subscribe(function(videoData) {
     const log = _.partial(console.log, `[showVideo/${videoData.id}]`);
     const error = _.partial(console.error, `[showVideo/${videoData.id}]`);
+    const warning = _.partial(console.warn, `[showVideo/${videoData.id}]`);
 
     //log('data', videoData);
 
@@ -469,11 +471,12 @@ function runErosionMachine() {
     }
 
     try {
-      erode(e);
+      erode(e, erosionMachine.ports.jsThereAreNoTargets.send);
       // check need to be muted. details here https://github.com/video-dev/can-autoplay
       canAutoPlay.video()
         .then(({result}) => {
           if (result === false) {
+            warning("video gonna play muted");
             e.muted = true;
           }
         })
@@ -499,7 +502,7 @@ function runErosionMachine() {
     e.src = _.get(imageData, 'src', '');
 
     try {
-      erode(e);
+      erode(e, erosionMachine.ports.jsThereAreNoTargets.send);
     } catch (err) {
       error("eroding error: ", err);
     }
@@ -518,7 +521,7 @@ function runErosionMachine() {
     e.textContent = textData.text;
 
     try {
-      erode(e);
+      erode(e, erosionMachine.ports.jsThereAreNoTargets.send);
     } catch (err) {
       error("eroding error: ", err);
     }
@@ -556,7 +559,7 @@ function runErosionMachine() {
     // stop eroding if there are no targets found
     if (target.length == 0) {
       error("there are no targets");
-      erosionMachine.ports.jsThereAreNoTargets.send(true);
+      erosionMachine.ports.jsThereAreNoTargets.send("there are no targets");
       return;
     }
 
