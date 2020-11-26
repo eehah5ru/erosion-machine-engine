@@ -16,4 +16,4 @@ port jsRollBack : List String -> Cmd msg
 --
 -- inbound
 --
-port jsThereAreNoTargets : (Bool -> msg) -> Sub msg
+port jsThereAreNoTargets : (String -> msg) -> Sub msg
