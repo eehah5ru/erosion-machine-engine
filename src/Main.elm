@@ -26,7 +26,7 @@ import Timeline.Types exposing (..)
 import Timeline.View
 -- import Index.View
 import ErosionMachine.ErosionMachine exposing (..)
-import ErosionMachine.Ports exposing (jsThereAreNoTargets)
+import ErosionMachine.Ports exposing (jsThereAreNoTargets, jsSplashScreenClosed, jsSetAutoplayStatus)
 
 -- MAIN
 
@@ -81,12 +81,6 @@ update msg model =
           (ErrorLoadTimeline s, Cmd.none)
 
     --
-    -- selecting erosion
-    --
-    SelectNextErosion frameId ->
-        handleSelectNextErosion model frameId
-
-    --
     -- Plan erosion frame
     --
     PlanErosion (events, frameId) ->
@@ -105,6 +99,13 @@ update msg model =
         (Error s, Cmd.none)
     PauseTimeline ->
         handlePauseTimeline model
+    SetAutoplayStatus status ->
+        handleSetAutoplayStatus model status
+    CheckAutoplayStatus frameId ->
+        handleCheckAutoplayStatus model frameId
+    SplashScreenClosed ->
+        (model, Cmd.none)
+
     -- RandomEventFired tl mE ->
     --     case mE of
     --         Nothing -> (Error "error getting random event" tl, Cmd.none)
@@ -132,13 +133,21 @@ thereAreNoTargetsSub : Sub Msg
 thereAreNoTargetsSub =
     jsThereAreNoTargets (\ _ -> PauseTimeline )
 
+splashScreenClosed : Sub Msg
+splashScreenClosed =
+    jsSplashScreenClosed (\ _ -> SplashScreenClosed )
+
+setAutoplayStatus : Sub Msg
+setAutoplayStatus =
+    jsSetAutoplayStatus (\ v -> SetAutoplayStatus v)
+
 -- SUBSCRIPTIONS
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
         Showing _ ->
-            Sub.batch <| thereAreNoTargetsSub :: userInputSubs
-        _ -> Sub.batch <| thereAreNoTargetsSub :: timerSub :: userInputSubs
+            Sub.batch <| splashScreenClosed :: setAutoplayStatus :: thereAreNoTargetsSub :: userInputSubs
+        _ -> Sub.batch <| splashScreenClosed :: setAutoplayStatus :: thereAreNoTargetsSub :: timerSub :: userInputSubs
 
 
 
@@ -170,6 +179,9 @@ viewTimeline model =
     Paused _ ->
         div []
             [text "paused"]
+    WaitingForAutoplayStatus _ ->
+        div []
+            [text "waiting autoplay status"]
 
     Error msg ->
         text <| "ERROR: " ++ msg

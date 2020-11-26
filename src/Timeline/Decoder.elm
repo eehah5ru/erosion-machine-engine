@@ -66,7 +66,8 @@ showVideoDecoder =
         |> required "subtitles_ru" string
         |> required "subtitles_en" string
         |> (optional "loop" bool False)
-        |> (optional "delayed" int 0))
+        |> (optional "delayed" int 0)
+        |> (optional "muted" bool False))
 
 showImageDecoder : Decoder Event
 showImageDecoder =

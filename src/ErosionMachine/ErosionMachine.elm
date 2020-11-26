@@ -45,16 +45,20 @@ deepShuffle : List Event -> Random.Generator (List Event)
 deepShuffle events =
     List.foldl foldEventGenerators (Random.constant []) <| List.map shuffleEvent events
 
-selectErosion : Timeline -> Cmd Msg
-selectErosion timeline =
-    Random.generate PlanErosion <| Random.map2 Tuple.pair (Random.andThen deepShuffle <| shuffle timeline.events) (Uuid.uuidGenerator)
+--
+-- args: timeline and muted status
+--
+selectErosion : Timeline -> Bool -> Cmd Msg
+selectErosion timeline isMuted =
+    Random.generate PlanErosion <| Random.map2 Tuple.pair (Random.andThen deepShuffle <| shuffle <| List.map (\ e -> setIsMuted isMuted e) timeline.events) (Uuid.uuidGenerator)
 
 --
 -- wait till the end of timeline and re-schedule shuffled timeline events
+-- asking js about autoplay status before
 --
 waitTillTheEndOfFrame : Int -> Uuid.Uuid -> Cmd Msg
 waitTillTheEndOfFrame delay frameId =
-    Process.sleep (toFloat delay) |> Task.perform (always (SelectNextErosion frameId))
+    Process.sleep (toFloat delay) |> Task.perform (always (CheckAutoplayStatus frameId))
 
 handleUserInput : Model -> Cmd Msg
 handleUserInput m =
@@ -70,20 +74,20 @@ handleTimeTick m =
     case m of
         Waiting {counter, timeline} ->
             if counter > 5 then
-                (tick m, selectErosion timeline)
+                (WaitingForAutoplayStatus {timeline = timeline}, jsCheckAutoplayStatus {})
             else
                 (tick m, Cmd.none)
         _ -> (m, Cmd.none)
 
-handleSelectNextErosion : Model -> Uuid.Uuid -> (Model, Cmd Msg)
-handleSelectNextErosion model sourceFrameId =
-    case model of
-        Showing {timeline, frameId} ->
-            if frameId /= sourceFrameId then
-                (model, Cmd.none)
-            else
-                (model, selectErosion timeline)
-        _ -> (model, Cmd.none)
+-- handleSelectNextErosion : Model -> Uuid.Uuid -> (Model, Cmd Msg)
+-- handleSelectNextErosion model sourceFrameId =
+--     case model of
+--         Showing {timeline, frameId} ->
+--             if frameId /= sourceFrameId then
+--                 (model, Cmd.none)
+--             else
+--                 (model, selectErosion timeline)
+--         _ -> (model, Cmd.none)
 
 handlePlanErosion : Model -> List Event -> Uuid.Uuid -> (Model, Cmd Msg)
 handlePlanErosion model events frameId =
@@ -122,6 +126,24 @@ handlePauseTimeline model =
         Showing data ->
             (Paused data, Cmd.none)
         _ -> (model, Cmd.none)
+
+handleCheckAutoplayStatus : Model -> Uuid.Uuid -> (Model, Cmd Msg)
+handleCheckAutoplayStatus model sourceFrameId =
+    case model of
+        Showing {timeline, frameId} ->
+            if frameId /= sourceFrameId then
+                (model, Cmd.none)
+            else
+                (WaitingForAutoplayStatus {timeline = timeline}, jsCheckAutoplayStatus {})
+        _ -> (model, Cmd.none)
+
+
+handleSetAutoplayStatus : Model -> Bool -> (Model, Cmd Msg)
+handleSetAutoplayStatus model isMuted =
+    case model of
+        WaitingForAutoplayStatus {timeline} ->
+            (model, selectErosion timeline isMuted)
+        _ -> (model, Cmd.none)
 --
 -- port helpers
 --
@@ -157,6 +179,10 @@ showEvents m events fId =
             Showing { timeline = timeline
                     , events = events
                     , frameId = fId }
+        WaitingForAutoplayStatus {timeline} ->
+            Showing { timeline = timeline
+                    , events = events
+                    , frameId = fId}
         _ -> Error "Cannot show event from this state"
 
 --

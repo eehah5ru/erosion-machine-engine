@@ -11,6 +11,8 @@ type Model
   | Waiting { timeline : Timeline
              , counter : Int }
   | Error String
+  | WaitingForAutoplayStatus
+    { timeline : Timeline}
   -- showing events
   | Showing
     { timeline : Timeline
@@ -24,13 +26,15 @@ type Model
 -- UPDATE
 type Msg
   = GotTimeline (Result Http.Error Timeline)
-  | SelectNextErosion Uuid.Uuid
   | PlanErosion (List Event, Uuid.Uuid)
   | Erode Event Uuid.Uuid
   | UserInput
   | TimeTick
   | PauseTimeline
+  | CheckAutoplayStatus Uuid.Uuid
+  | SetAutoplayStatus Bool
   | RaiseError String
+  | SplashScreenClosed
 
 --
 -- AUX TYPES

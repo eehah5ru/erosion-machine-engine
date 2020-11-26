@@ -25,6 +25,7 @@ type alias VideoData
       , subtitlesEn : String
       , loop : Bool
       , delayed : Int
+      , muted : Bool
       }
 
 type alias ImageData =
@@ -164,19 +165,10 @@ getId e =
         (Assemblage ad) -> ad.label
         (Chapter cd) -> cd.label
 
-
--- type alias G1 = { name : String }
-
--- type alias G2 = { name : String }
-
--- type alias Person a =
---     { a | name : String }
-
--- getName : Person a -> String
--- getName p = p.name
-
--- g1 : G1
--- g1 = { name = "g1"}
-
--- g2 : G2
--- g2 = { name = "g2"}
+setIsMuted : Bool -> Event -> Event
+setIsMuted isMuted e =
+    case e of
+        (ShowVideo vd) -> ShowVideo {vd | muted = isMuted}
+        (Assemblage ad) -> Assemblage {ad | events = List.map (setIsMuted isMuted) ad.events}
+        (Chapter cd) -> Chapter {cd | events = List.map (setIsMuted isMuted) cd.events}
+        _ -> e
