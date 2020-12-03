@@ -26,6 +26,7 @@ type alias VideoData
       , loop : Bool
       , delayed : Int
       , muted : Bool
+      , position : String
       }
 
 type alias ImageData =
@@ -35,6 +36,7 @@ type alias ImageData =
     , duration : Int
     , src : String
     , delayed : Int
+    , position : String
     }
 
 type alias TextData =
@@ -44,6 +46,7 @@ type alias TextData =
     , duration : Int
     , text : String
     , delayed : Int
+    , position : String
     }
 
 type alias AddClassData =
@@ -87,6 +90,7 @@ type Event
 type alias TimelineConfig =
     { delay : Int
     , disabled : Bool
+    , finalErosion: Event
     }
 
 type alias Timeline =

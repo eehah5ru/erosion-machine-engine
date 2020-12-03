@@ -13,15 +13,20 @@ type Model
   | Error String
   | WaitingForAutoplayStatus
     { timeline : Timeline}
+  | WaitingForErosion
+    { timeline : Timeline
+    , isMuted : Bool}
   -- showing events
   | Showing
     { timeline : Timeline
     , events : List ErodeEvent
-    , frameId : Uuid.Uuid}
+    , frameId : Uuid.Uuid
+    , isMuted : Bool}
   | Paused
     { timeline : Timeline
     , events : List ErodeEvent
-    , frameId : Uuid.Uuid}
+    , frameId : Uuid.Uuid
+    , isMuted : Bool}
 
 -- UPDATE
 type Msg

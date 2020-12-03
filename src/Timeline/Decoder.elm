@@ -16,7 +16,7 @@ import Timeline.Types exposing (..)
 
 timelineConfigDecoder : Decoder TimelineConfig
 timelineConfigDecoder =
-    D.map2 TimelineConfig (D.at ["config", "delay"] int) (D.at ["config", "disabled"] bool)
+    D.map3 TimelineConfig (D.at ["config", "delay"] int) (D.at ["config", "disabled"] bool) (D.at ["config", "final-erosion"] eventDecoder)
 
 event : String -> Decoder Event -> Decoder Event
 event label eDecoder = DE.when (field "type" string) (\x -> x == label) eDecoder
@@ -67,7 +67,8 @@ showVideoDecoder =
         |> required "subtitles_en" string
         |> (optional "loop" bool False)
         |> (optional "delayed" int 0)
-        |> (optional "muted" bool False))
+        |> (optional "muted" bool False)
+        |> (optional "position" string "replace"))
 
 showImageDecoder : Decoder Event
 showImageDecoder =
@@ -77,7 +78,8 @@ showImageDecoder =
         |> required "class" string
         |> required "duration" int
         |> required "src" string
-        |> optional "delayed" int 0)
+        |> optional "delayed" int 0
+        |> (optional "position" string "replace"))
 
 showTextDecoder : Decoder Event
 showTextDecoder =
@@ -88,7 +90,8 @@ showTextDecoder =
                 |> required "class" string
                 |> required "duration" int
                 |> required "text" string
-                |> optional "delayed" int 0)
+                |> optional "delayed" int 0
+                |> (optional "position" string "replace"))
 
 addClassDecoder : Decoder Event
 addClassDecoder =

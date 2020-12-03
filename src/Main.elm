@@ -181,7 +181,11 @@ viewTimeline model =
             [text "paused"]
     WaitingForAutoplayStatus _ ->
         div []
-            [text "waiting autoplay status"]
+            [text "waiting for autoplay status"]
+
+    WaitingForErosion _ ->
+        div []
+            [text "waiting for an erosion process starting"]
 
     Error msg ->
         text <| "ERROR: " ++ msg

@@ -63,10 +63,10 @@ waitTillTheEndOfFrame delay frameId =
 handleUserInput : Model -> Cmd Msg
 handleUserInput m =
     case m of
-        Showing {events} ->
-            rollBack <| List.map (\x -> x.event) events
-        Paused {events} ->
-            rollBack <| List.map (\x -> x.event) events
+        Showing {events, timeline} ->
+            rollBack <| (timeline.config.finalErosion :: (List.map (\x -> x.event) events))
+        Paused {events, timeline} ->
+            rollBack <| (timeline.config.finalErosion :: (List.map (\x -> x.event) events))
         _ -> Cmd.none
 
 handleTimeTick : Model -> (Model, Cmd Msg)
@@ -124,7 +124,7 @@ handlePauseTimeline : Model -> (Model, Cmd Msg)
 handlePauseTimeline model =
     case model of
         Showing data ->
-            (Paused data, Cmd.none)
+            (Paused data, jsErode (setIsMuted data.isMuted data.timeline.config.finalErosion) data.frameId)
         _ -> (model, Cmd.none)
 
 handleCheckAutoplayStatus : Model -> Uuid.Uuid -> (Model, Cmd Msg)
@@ -142,7 +142,8 @@ handleSetAutoplayStatus : Model -> Bool -> (Model, Cmd Msg)
 handleSetAutoplayStatus model isMuted =
     case model of
         WaitingForAutoplayStatus {timeline} ->
-            (model, selectErosion timeline isMuted)
+            ( WaitingForErosion {timeline = timeline, isMuted = isMuted}
+            , selectErosion timeline isMuted )
         _ -> (model, Cmd.none)
 --
 -- port helpers
@@ -174,15 +175,18 @@ showEvents m events fId =
         Waiting {timeline} ->
             Showing { timeline = timeline
                     , events = events
-                    , frameId = fId}
-        Showing {timeline} ->
+                    , frameId = fId
+                    , isMuted = True}
+        Showing {timeline, isMuted} ->
             Showing { timeline = timeline
                     , events = events
-                    , frameId = fId }
-        WaitingForAutoplayStatus {timeline} ->
+                    , frameId = fId
+                    , isMuted = isMuted}
+        WaitingForErosion {timeline, isMuted} ->
             Showing { timeline = timeline
                     , events = events
-                    , frameId = fId}
+                    , frameId = fId
+                    , isMuted = isMuted}
         _ -> Error "Cannot show event from this state"
 
 --
