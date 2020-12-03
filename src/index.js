@@ -234,11 +234,11 @@ function getTarget() {
 };
 
 //
-// replace dome element with an erosion
+// replace dom element
 //
-function erode(el, onError) {
-  const log = _.partial(console.log, `[erode/${el.id}]`);
-  const error = _.partial(console.error, `[erode/${el.id}]`);
+function replaceElement(el, onError) {
+  const log = _.partial(console.log, `[replaceElement/${el.id}]`);
+  const error = _.partial(console.error, `[replaceElement/${el.id}]`);
   //log('element', el);
 
   var target = getTarget();
@@ -268,6 +268,45 @@ function erode(el, onError) {
   }
 
   jQuery(target).hide();
+}
+
+
+//
+// make an overlay
+//
+function overlayElement(el, onError) {
+  const log = _.partial(console.log, `[overlayElement/${el.id}]`);
+  const error = _.partial(console.error, `[overlayElement/${el.id}]`);
+
+  jQuery(el).addClass("op-overlay");
+
+  jQuery("body").append(el);
+
+}
+
+
+//
+// do erosion
+// kinda broker funciton
+//
+function erode(el, onError) {
+  const log = _.partial(console.log, `[erode/${el.id}]`);
+  const error = _.partial(console.error, `[erode/${el.id}]`);
+
+  const position = _.get(el, "eventData.position", "replace");
+
+  log("position: ", position);
+  log("eventData: ", el.eventData);
+
+  if (_.eq(position, "replace")) {
+    return replaceElement(el, onError);
+  }
+
+  if (_.eq(position, "overlay")) {
+    return overlayElement(el, onError);
+  }
+
+  throw(`unknown position: ${position}`);
 }
 
 //
@@ -323,13 +362,16 @@ function playVideo(videoElement) {
 
 //
 // create base element
-//
+// returns DOM element with 'eventData' set to data recieved from elm
 function createBaseErosionElement(eType, data) {
   let e = document.createElement(eType);
 
   e.id = _.get(data, 'id', _.uniqueId());
   e.classList = _.get(data, 'class', '');
   e.label = _.get(data, 'label', '');
+
+  e.eventData = data;
+
   jQuery(e).addClass('eroded');
   jQuery(e).addClass(_.get(data, 'label', ''));     // add label as class to use it in roll back
 
