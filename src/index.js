@@ -399,21 +399,52 @@ function stubElement(stubData) {
 //
 // splash screen factory
 //
-function showSplashScreen(onClose) {
+function showSplashScreen(handlers) {
   let e = document.createElement('div');
 
   e.id = "op-erosion-splash-screen";
   e.classList = 'eroded';
 
+  const $textContainer = jQuery(document.createElement('div'));
+
+  $textContainer.addClass("text-container");
+
+  jQuery(e).append($textContainer);
+
   let h1 = document.createElement('h1');
   h1.textContent = "enter";
-  jQuery(e).append(h1);
-  jQuery(h1).click(() => {
-    onClose("splash screen closed");
+  h1.classList = "active";
+
+  let h1Empty = document.createElement('h1');
+  h1Empty.textContent = "enter";
+
+
+  jQuery($textContainer).append(h1);
+  jQuery($textContainer).append(h1Empty);
+
+  jQuery(h1).add(h1Empty).click(() => {
+    handlers.onClose("splash screen closed");
     jQuery(e).hide();
   });
 
+  // jQuery(e).hide();
+
   jQuery("body").append(e);
+
+  // jQuery(e)
+  //   .css("top", function() {
+  //     const curHeight = jQuery(this).height();
+
+  //     return _.random(0, jQuery(window).height() - curHeight);
+  //   })
+  //   .css("left", function() {
+  //     const curWidth = jQuery(this).width();
+
+  //     return _.random(0, jQuery(window).width() - curWidth);
+  //   })
+  //   .show();
+
+  handlers.onIsShown("splash screen is shown");
 
 }
 
@@ -441,7 +472,6 @@ function runErosionMachine() {
   // Learn more about service workers: https://bit.ly/CRA-PWA
   serviceWorker.unregister();
 
-  showSplashScreen(erosionMachine.ports.jsSplashScreenClosed.send);
   //
   //
   // incoming ports
@@ -646,6 +676,112 @@ function runErosionMachine() {
         log(`can be played with sound: ${result}`);
         erosionMachine.ports.jsSetAutoplayStatus.send(!result);
       });
+  });
+
+  //
+  //
+  // splash screen subs
+  //
+  //
+
+  //
+  // show splash screen
+  //
+  erosionMachine.ports.jsShowSplashScreen.subscribe(function() {
+    const log = _.partial(console.log, '[show-splashscreen]');
+
+    showSplashScreen({onIsShown: erosionMachine.ports.jsSplashScreenIsShown.send,
+                      onClose: erosionMachine.ports.jsSplashScreenClosed.send});
+  });
+
+  //
+  // grow splash screen
+  //
+  erosionMachine.ports.jsGrowSplashScreen.subscribe(function( msg) {
+    const log = _.partial(console.log, '[grow-splashscreen]');
+
+    const $oldText = jQuery("#op-erosion-splash-screen h1.active");
+    const $newText = jQuery("#op-erosion-splash-screen h1:not(.active)");
+
+
+    $oldText.removeClass("active");
+    $newText.addClass("active");
+
+    $newText.text(msg);
+
+    const textWidth = _.max([$oldText.width(), $newText.width()]);
+    const textHeight = _.max([$oldText.height(), $newText.height()]);
+
+    jQuery("#op-erosion-splash-screen")
+      .height(function(i, curHeight) {
+        const h = _.max([curHeight, textHeight]);
+
+        return _.clamp(h + _.random(0, 10), 0, jQuery(window).height());
+      })
+      .width(function(i, curWidth) {
+        const w = _.max([curWidth, textWidth]);
+
+        return _.clamp(w + _.random(0, 10), 0, jQuery(window).width());
+      })
+      .css("top", function(i, curTop) {
+        const curHeight = jQuery(this).height();
+        var d = _.random(-100, 100);
+
+        var top = _.chain(curTop).replace("px", "").toNumber().value() + d;
+
+        return _.clamp(top, 0, jQuery(window).height() - curHeight);
+
+      })
+      .css("left", function(i, curLeft) {
+        const curWidth = jQuery(this).width();
+        var d = _.random(-100, 100);
+
+        var left = _.chain(curLeft).replace("px", "").toNumber().value() + d; // _.sample([d, (-1) * d]);
+
+        return `${_.clamp(left, 0, jQuery(window).width() - curWidth)}px`;
+      });
+
+  });
+
+  //
+  // parse language of the page
+  //
+  erosionMachine.ports.jsAskLanguage.subscribe(function() {
+    const log = _.partial(console.log, '[as-language]');
+
+    const isRuByHeaders = jQuery("body:lang(ru)").length != 0;
+    const isEnByHeaders = jQuery("body:lang(en)").add("body:lang(en-us)").length != 0;
+    const isRuByUrl = /\/ru\//.test(window.location.href);
+    const isEnByUrl = /\/en\//.test(window.location.href);
+
+    log("ru by headers: ", isRuByHeaders);
+    log("ru by url:", isRuByUrl);
+
+    log("en by headers: ", isEnByHeaders);
+    log("en by url:", isEnByUrl);
+
+    // malformed garage digital web-page
+    if (isRuByHeaders && isEnByUrl) {
+      log("lang is ", "en");
+      erosionMachine.ports.jsGotLanguage.send("en");
+      return;
+    }
+
+    if (isRuByHeaders || isRuByUrl) {
+      log("lang is ", "ru");
+      erosionMachine.ports.jsGotLanguage.send("ru");
+      return;
+    }
+
+    if (isEnByHeaders ||isEnByUrl) {
+      log("lang is ", "en");
+      erosionMachine.ports.jsGotLanguage.send("en");
+      return;
+    }
+
+    // default lang
+      log("unknown lang. set to default:", "en");
+      erosionMachine.ports.jsGotLanguage.send("en");
   });
 
   console.log("[runErosionMachine] done");
