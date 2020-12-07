@@ -26,7 +26,11 @@ import Timeline.Types exposing (..)
 import Timeline.View
 -- import Index.View
 import ErosionMachine.ErosionMachine exposing (..)
-import ErosionMachine.Ports exposing (jsThereAreNoTargets, jsSplashScreenClosed, jsSetAutoplayStatus)
+import ErosionMachine.Ports exposing (jsThereAreNoTargets, jsSetAutoplayStatus)
+
+
+import SplashScreen.SplashScreen exposing (..)
+import SplashScreen.Types exposing (..)
 
 -- MAIN
 
@@ -67,16 +71,13 @@ init timelineUrl =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    --
-    -- loading timeline
-    --
-    -- LoadTimeline ->
-    --   (LoadingTimeline, getTimeline)
-
     GotTimeline result ->
       case result of
         Ok timeline ->
-          (Waiting {timeline = timeline, counter = 0}, Cmd.none)
+          ( Running
+               { erosionModel = Waiting { timeline = timeline, counter = 0}
+               , splashScreenModel = NotBornYet { text = timeline.config.splashScreenText}}
+          , Cmd.batch [jsShowSplashScreen {}])
         Err s ->
           (ErrorLoadTimeline s, Cmd.none)
 
@@ -84,27 +85,40 @@ update msg model =
     -- Plan erosion frame
     --
     PlanErosion (events, frameId) ->
-        handlePlanErosion model events frameId
+        case handlePlanErosion events frameId
+             |> handleSubModelResult l_erosionModel model
+             |> Result.mapError (\s -> (Error s, Cmd.none)) of
+            Ok v -> v
+            Err e -> e
+
     --
     -- eroding
     --
     Erode event frameId ->
-        handleErode model event frameId
-
+        handleSubModel l_erosionModel model <| handleErode event frameId
     UserInput ->
-        (wait model, handleUserInput model)
+        handleSubModel l_erosionModel model <| handleUserInput
     TimeTick ->
-        handleTimeTick model
+        handleSubModel l_erosionModel model <| handleTimeTick
     RaiseError s ->
         (Error s, Cmd.none)
     PauseTimeline ->
-        handlePauseTimeline model
+        handleSubModel l_erosionModel model <| handlePauseTimeline
     SetAutoplayStatus status ->
-        handleSetAutoplayStatus model status
+        handleSubModel l_erosionModel model <| handleSetAutoplayStatus status
     CheckAutoplayStatus frameId ->
-        handleCheckAutoplayStatus model frameId
+        handleSubModel l_erosionModel model <| handleCheckAutoplayStatus frameId
+    --
+    -- splash screen
+    --
+    SplashScreenIsShown ->
+        handleSubModel l_splashScreenModel model <| handleSplashScreenIsShown
     SplashScreenClosed ->
         (model, Cmd.none)
+    GrowSplashScreen ->
+        handleSubModel l_splashScreenModel model <| handleGrowSplashScreen
+    SplashScreenGotLanguage lang ->
+        handleSubModel l_splashScreenModel model <| handleSplashScreenGotLanguage lang
 
     -- RandomEventFired tl mE ->
     --     case mE of
@@ -129,13 +143,26 @@ timerSub : Sub Msg
 timerSub =
     Time.every 1000 (always TimeTick)
 
+splashScreenTimerSub : Sub Msg
+splashScreenTimerSub =
+    Time.every 8000 (always GrowSplashScreen)
+
+
 thereAreNoTargetsSub : Sub Msg
 thereAreNoTargetsSub =
     jsThereAreNoTargets (\ _ -> PauseTimeline )
 
-splashScreenClosed : Sub Msg
-splashScreenClosed =
+splashScreenClosedSub : Sub Msg
+splashScreenClosedSub =
     jsSplashScreenClosed (\ _ -> SplashScreenClosed )
+
+splashScreenIsShownSub : Sub Msg
+splashScreenIsShownSub =
+    jsSplashScreenIsShown (\ _  -> SplashScreenIsShown)
+
+gotLanguageSub : Sub Msg
+gotLanguageSub =
+    jsGotLanguage (\ lang -> SplashScreenGotLanguage (parseLang lang))
 
 setAutoplayStatus : Sub Msg
 setAutoplayStatus =
@@ -145,21 +172,35 @@ setAutoplayStatus =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Showing _ ->
-            Sub.batch <| splashScreenClosed :: setAutoplayStatus :: thereAreNoTargetsSub :: userInputSubs
-        _ -> Sub.batch <| splashScreenClosed :: setAutoplayStatus :: thereAreNoTargetsSub :: timerSub :: userInputSubs
+        Running {erosionModel, splashScreenModel} ->
+            Sub.batch [ erosionSubscriptions erosionModel
+                      , splashScreenSubscriptions splashScreenModel ]
+        _ -> Sub.none
 
+erosionSubscriptions : ErosionModel -> Sub Msg
+erosionSubscriptions model =
+    case model of
+        Showing _ ->
+            Sub.batch <| setAutoplayStatus :: thereAreNoTargetsSub :: userInputSubs
+        _ -> Sub.batch <| setAutoplayStatus :: thereAreNoTargetsSub :: timerSub :: userInputSubs
+
+splashScreenSubscriptions : SplashScreenModel -> Sub Msg
+splashScreenSubscriptions model =
+    case model of
+        NotBornYet _ -> Sub.batch [splashScreenIsShownSub, gotLanguageSub]
+        Growing _ -> Sub.batch [splashScreenTimerSub, splashScreenClosedSub]
+        Closed _ -> Sub.none
 
 
 -- VIEW
 view : Model -> Html Msg
 view model =
   div [ style "display" "none"]
-    [ viewTimeline model ]
+    [ viewModel model ]
 
 
-viewTimeline : Model -> Html Msg
-viewTimeline model =
+viewModel : Model -> Html Msg
+viewModel model =
   case model of
     ErrorLoadTimeline s ->
       div []
@@ -169,23 +210,42 @@ viewTimeline model =
       div []
           [text "Loading timeline..."]
 
-    Waiting {counter} ->
-        div []
-            [text ("waiting " ++ (String.fromInt counter))]
-
-    Showing {events} ->
-        div []
-            [text <| "showing " ++ (String.join ", " <| List.map getLabel <| List.map (\x -> x.event) events)]
-    Paused _ ->
-        div []
-            [text "paused"]
-    WaitingForAutoplayStatus _ ->
-        div []
-            [text "waiting for autoplay status"]
-
-    WaitingForErosion _ ->
-        div []
-            [text "waiting for an erosion process starting"]
-
     Error msg ->
         text <| "ERROR: " ++ msg
+
+    Running {erosionModel, splashScreenModel}->
+        div []
+            [ viewErosionStatus erosionModel
+            , viewSplashScreenStatus splashScreenModel]
+
+
+viewErosionStatus : ErosionModel -> Html Msg
+viewErosionStatus model =
+    case model of
+        Waiting {counter} ->
+            div []
+                [text ("waiting " ++ (String.fromInt counter))]
+
+        Showing {events} ->
+            div []
+                [text <| "showing " ++ (String.join ", " <| List.map getLabel <| List.map (\x -> x.event) events)]
+        Paused _ ->
+            div []
+                [text "paused"]
+        WaitingForAutoplayStatus _ ->
+            div []
+                [text "waiting for autoplay status"]
+
+        WaitingForErosion _ ->
+            div []
+                [text "waiting for an erosion process starting"]
+
+viewSplashScreenStatus : SplashScreenModel -> Html Msg
+viewSplashScreenStatus model =
+    case model of
+        NotBornYet _ ->
+            text "not born yet"
+        Growing _ ->
+            text "growing"
+        Closed _ ->
+            text "closed"

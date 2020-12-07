@@ -16,13 +16,21 @@ import Timeline.Types exposing (..)
 
 timelineConfigDecoder : Decoder TimelineConfig
 timelineConfigDecoder =
-    D.map3 TimelineConfig (D.at ["config", "delay"] int) (D.at ["config", "disabled"] bool) (D.at ["config", "final-erosion"] eventDecoder)
+    D.map4 TimelineConfig (D.at ["config", "delay"] int) (D.at ["config", "disabled"] bool) (D.at ["config", "final-erosion"] eventDecoder) (D.at ["config", "splash-screen-text"] splashScreenTextDecoder)
 
 event : String -> Decoder Event -> Decoder Event
 event label eDecoder = DE.when (field "type" string) (\x -> x == label) eDecoder
 
 fromData : (a -> Event) -> Decoder a -> Decoder Event
 fromData f d = d |> D.andThen (\x -> D.succeed (f x))
+
+
+splashScreenTextDecoder : Decoder SplashScreenText
+splashScreenTextDecoder =
+    D.succeed SplashScreenText
+        |> required "ru" (list string)
+        |> required "en" (list string)
+
 
 assemblageDecoder : Decoder Event
 assemblageDecoder =

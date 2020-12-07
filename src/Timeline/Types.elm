@@ -87,10 +87,15 @@ type Event
 --     , label : String
 --     }
 
+type alias SplashScreenText =
+    { ru : List String
+    , en : List String}
+
 type alias TimelineConfig =
     { delay : Int
     , disabled : Bool
-    , finalErosion: Event
+    , finalErosion : Event
+    , splashScreenText : SplashScreenText
     }
 
 type alias Timeline =

@@ -19,5 +19,4 @@ port jsCheckAutoplayStatus : {} -> Cmd msg
 -- inbound
 --
 port jsThereAreNoTargets : (String -> msg) -> Sub msg
-port jsSplashScreenClosed : (String -> msg) -> Sub msg
 port jsSetAutoplayStatus : (Bool -> msg) -> Sub msg

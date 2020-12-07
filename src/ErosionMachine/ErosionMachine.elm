@@ -8,6 +8,7 @@ import Task
 import Time
 import Json.Decode as D
 import Uuid
+import Result
 
 import Types exposing (..)
 import Timeline.Types exposing (..)
@@ -60,16 +61,20 @@ waitTillTheEndOfFrame : Int -> Uuid.Uuid -> Cmd Msg
 waitTillTheEndOfFrame delay frameId =
     Process.sleep (toFloat delay) |> Task.perform (always (CheckAutoplayStatus frameId))
 
-handleUserInput : Model -> Cmd Msg
+handleUserInput : ErosionModel -> (ErosionModel, Cmd Msg)
 handleUserInput m =
     case m of
         Showing {events, timeline} ->
-            rollBack <| (timeline.config.finalErosion :: (List.map (\x -> x.event) events))
+            let cmd = rollBack <| (timeline.config.finalErosion :: (List.map (\x -> x.event) events))
+            in
+                (wait m, cmd)
         Paused {events, timeline} ->
-            rollBack <| (timeline.config.finalErosion :: (List.map (\x -> x.event) events))
-        _ -> Cmd.none
+            let cmd = rollBack <| (timeline.config.finalErosion :: (List.map (\x -> x.event) events))
+            in
+                (wait m, cmd)
+        _ -> (m, Cmd.none)
 
-handleTimeTick : Model -> (Model, Cmd Msg)
+handleTimeTick : ErosionModel -> (ErosionModel, Cmd Msg)
 handleTimeTick m =
     case m of
         Waiting {counter, timeline} ->
@@ -79,7 +84,7 @@ handleTimeTick m =
                 (tick m, Cmd.none)
         _ -> (m, Cmd.none)
 
--- handleSelectNextErosion : Model -> Uuid.Uuid -> (Model, Cmd Msg)
+-- handleSelectNextErosion : ErosionModel -> Uuid.Uuid -> (ErosionModel, Cmd Msg)
 -- handleSelectNextErosion model sourceFrameId =
 --     case model of
 --         Showing {timeline, frameId} ->
@@ -89,13 +94,13 @@ handleTimeTick m =
 --                 (model, selectErosion timeline)
 --         _ -> (model, Cmd.none)
 
-handlePlanErosion : Model -> List Event -> Uuid.Uuid -> (Model, Cmd Msg)
-handlePlanErosion model events frameId =
+handlePlanErosion : List Event -> Uuid.Uuid -> ErosionModel -> Result String (ErosionModel, Cmd Msg)
+handlePlanErosion events frameId model =
     case model of
-        Paused _ -> (model, Cmd.none)
+        Paused _ -> Ok (model, Cmd.none)
         _ -> let (frameDuration, erodeEvents) = toErodeEvents 0 events
              in
-                 (showEvents model erodeEvents frameId, Cmd.batch [planErosion erodeEvents frameId, waitTillTheEndOfFrame frameDuration frameId])
+                 Result.map (\m -> (m, Cmd.batch [planErosion erodeEvents frameId, waitTillTheEndOfFrame frameDuration frameId])) (showEvents model erodeEvents frameId)
 
 --
 -- schedule erosion events from the timeline
@@ -109,8 +114,8 @@ planErosion events frameId =
         Cmd.batch cmds
 
 
-handleErode : Model -> Event -> Uuid.Uuid -> (Model, Cmd Msg)
-handleErode model event currentFrameId =
+handleErode : Event -> Uuid.Uuid -> ErosionModel -> (ErosionModel, Cmd Msg)
+handleErode event currentFrameId model =
     case model of
         Showing {frameId} ->
             if currentFrameId /= frameId then
@@ -120,15 +125,15 @@ handleErode model event currentFrameId =
         _ -> (model, Cmd.none)
 
 
-handlePauseTimeline : Model -> (Model, Cmd Msg)
+handlePauseTimeline : ErosionModel -> (ErosionModel, Cmd Msg)
 handlePauseTimeline model =
     case model of
         Showing data ->
             (Paused data, jsErode (setIsMuted data.isMuted data.timeline.config.finalErosion) data.frameId)
         _ -> (model, Cmd.none)
 
-handleCheckAutoplayStatus : Model -> Uuid.Uuid -> (Model, Cmd Msg)
-handleCheckAutoplayStatus model sourceFrameId =
+handleCheckAutoplayStatus : Uuid.Uuid -> ErosionModel -> (ErosionModel, Cmd Msg)
+handleCheckAutoplayStatus sourceFrameId model =
     case model of
         Showing {timeline, frameId} ->
             if frameId /= sourceFrameId then
@@ -138,8 +143,8 @@ handleCheckAutoplayStatus model sourceFrameId =
         _ -> (model, Cmd.none)
 
 
-handleSetAutoplayStatus : Model -> Bool -> (Model, Cmd Msg)
-handleSetAutoplayStatus model isMuted =
+handleSetAutoplayStatus : Bool -> ErosionModel -> (ErosionModel, Cmd Msg)
+handleSetAutoplayStatus isMuted model =
     case model of
         WaitingForAutoplayStatus {timeline} ->
             ( WaitingForErosion {timeline = timeline, isMuted = isMuted}
@@ -169,30 +174,30 @@ rollBack showed =
 --
 --
 
-showEvents : Model -> List ErodeEvent -> Uuid.Uuid -> Model
+showEvents : ErosionModel -> List ErodeEvent -> Uuid.Uuid -> Result String ErosionModel
 showEvents m events fId =
     case m of
         Waiting {timeline} ->
             Showing { timeline = timeline
                     , events = events
                     , frameId = fId
-                    , isMuted = True}
+                    , isMuted = True} |> Ok
         Showing {timeline, isMuted} ->
             Showing { timeline = timeline
                     , events = events
                     , frameId = fId
-                    , isMuted = isMuted}
+                    , isMuted = isMuted} |> Ok
         WaitingForErosion {timeline, isMuted} ->
             Showing { timeline = timeline
                     , events = events
                     , frameId = fId
-                    , isMuted = isMuted}
-        _ -> Error "Cannot show event from this state"
+                    , isMuted = isMuted} |> Ok
+        _ -> Err "Cannot show event from this state"
 
 --
 -- wait till the user becomes calm
 --
-wait : Model -> Model
+wait : ErosionModel -> ErosionModel
 wait m =
     case m of
         Showing{timeline} ->
@@ -206,7 +211,7 @@ wait m =
                     , counter = 0}
         _ -> m -- Error "Cannot wait from this state"
 
-tick : Model -> Model
+tick : ErosionModel -> ErosionModel
 tick m =
     case m of
         Showing _ -> m
