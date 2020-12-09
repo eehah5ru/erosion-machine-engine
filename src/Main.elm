@@ -26,7 +26,7 @@ import Timeline.Types exposing (..)
 import Timeline.View
 -- import Index.View
 import ErosionMachine.ErosionMachine exposing (..)
-import ErosionMachine.Ports exposing (jsThereAreNoTargets, jsSetAutoplayStatus)
+import ErosionMachine.Ports exposing (jsThereAreNoTargets, jsSetAutoplayStatus, jsTouchMove)
 
 
 import SplashScreen.SplashScreen exposing (..)
@@ -133,11 +133,18 @@ userInputSub : (D.Decoder Msg -> Sub Msg) -> Sub Msg
 userInputSub f =
     f (D.succeed UserInput)
 
+touchMoveSub : Sub Msg
+touchMoveSub =
+    jsTouchMove (\ _ -> UserInput)
+
+
 userInputSubs : List (Sub Msg)
 userInputSubs =
     [userInputSub Events.onClick
     , userInputSub Events.onMouseMove
-    , userInputSub Events.onKeyUp]
+    , userInputSub Events.onKeyUp
+    , touchMoveSub]
+
 
 timerSub : Sub Msg
 timerSub =

@@ -156,17 +156,29 @@ handleSetAutoplayStatus isMuted model =
 jsErode : Event -> Uuid.Uuid -> Cmd Msg
 jsErode e frameId =
     case e of
-        ShowVideo vd -> jsShowVideo {vd | id = vd.id ++ (Uuid.toString frameId)}
-        ShowImage iData -> jsShowImage {iData | id = iData.id ++ (Uuid.toString frameId)}
-        ShowText td -> jsShowText {td | id = td.id ++ (Uuid.toString frameId)}
-        AddClass acd -> jsAddClass {acd | id = acd.id ++ (Uuid.toString frameId)}
+        ShowVideo vd -> jsShowVideo {vd | id = vd.id ++ "-" ++ (Uuid.toString frameId)}
+        ShowImage iData -> jsShowImage {iData | id = iData.id ++ "-" ++ (Uuid.toString frameId)}
+        ShowText td -> jsShowText {td | id = td.id ++ "-" ++ (Uuid.toString frameId)}
+        AddClass acd -> jsAddClass {acd | id = acd.id ++ "-" ++ (Uuid.toString frameId)}
+        RemoveClass rcd -> jsRemoveClass {rcd | id = rcd.id ++ "-" ++(Uuid.toString frameId)}
         HideElement hed -> jsHideElement hed
         Assemblage _ -> Cmd.none
         Chapter cs -> Cmd.none
 
 rollBack : List Event -> Cmd Msg
-rollBack showed =
-    jsRollBack <| List.map getId showed
+rollBack shownEvents =
+    let f e =
+            case e of
+                ShowVideo vd -> jsRollBackShowVideo vd
+                ShowImage id -> jsRollBackShowImage id
+                ShowText td -> jsRollBackShowText td
+                AddClass acd -> jsRollBackAddClass acd
+                RemoveClass rcd -> jsRollBackRemoveClass rcd
+                HideElement hed -> jsRollBackHideElement hed
+                _ -> Cmd.none
+    in
+        Cmd.batch
+            <| List.map f shownEvents
 
 --
 --

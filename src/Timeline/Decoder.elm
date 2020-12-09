@@ -43,6 +43,7 @@ eventDecoder = D.oneOf [ event "assemblage" assemblageDecoder
                         , event "showImage" showImageDecoder
                         , event "showText" showTextDecoder
                         , event "addClass" addClassDecoder
+                        , event "removeClass" removeClassDecoder
                         , event "hideElement" hideElementDecoder]
 
 eventsDecoder : Decoder (List Event)
@@ -53,7 +54,8 @@ chapterDecoder : Decoder Event
 chapterDecoder =
     fromData Chapter <| (D.succeed ChapterData
         |> required "label" string
-        |> required "events" (D.list (D.lazy (\ _ -> eventDecoder))))
+        |> required "events" (D.list (D.lazy (\ _ -> eventDecoder)))
+        |> optional "delayed" int 0)
 
 hideElementDecoder : Decoder Event
 hideElementDecoder =
@@ -108,7 +110,20 @@ addClassDecoder =
                    |> required "id" string
                    |> required "label" string
                    |> required "class" string
-                   |> optional "delayed" int 0)
+                   |> optional "delayed" int 0
+                   |> optional "selector" string "")
+
+removeClassDecoder : Decoder Event
+removeClassDecoder =
+    fromData RemoveClass
+        <| (D.succeed RemoveClassData
+                   |> required "id" string
+                   |> required "label" string
+                   |> required "class" string
+                   |> optional "delayed" int 0
+                   |> optional "selector" string "")
+
+
 
 
 timelineDecoder : Decoder Timeline

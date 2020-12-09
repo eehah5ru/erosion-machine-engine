@@ -54,6 +54,15 @@ type alias AddClassData =
     , label : String
     , class : String
     , delayed : Int
+    , selector : String
+    }
+
+type alias RemoveClassData =
+    { id : String
+    , label : String
+    , class : String
+    , delayed : Int
+    , selector : String
     }
 
 type alias AssemblageData =
@@ -64,6 +73,7 @@ type alias AssemblageData =
 type alias ChapterData =
     { label : String
     , events : List Event
+    , delayed : Int
     }
 
 type alias HideElementData =
@@ -78,6 +88,7 @@ type Event
     | ShowImage ImageData
     | ShowText TextData
     | AddClass AddClassData
+    | RemoveClass RemoveClassData
     | HideElement HideElementData
     | Assemblage AssemblageData
     | Chapter ChapterData
@@ -115,6 +126,7 @@ getLabel e =
         (ShowImage id) -> id.label
         (ShowText td) -> td.label
         (AddClass acd) -> acd.label
+        (RemoveClass rcd) -> rcd.label
         (HideElement hed) -> hed.label
         (Assemblage ad) -> ad.label
         (Chapter cd) -> cd.label
@@ -126,9 +138,10 @@ getDelay e =
         (ShowImage id) -> id.delayed
         (ShowText td) -> td.delayed
         (AddClass acd) -> acd.delayed
+        (RemoveClass rcd) -> rcd.delayed
         (HideElement hed) -> hed.delayed
         (Assemblage ad) -> 0
-        (Chapter _) -> 0
+        (Chapter cd) -> cd.delayed
 
 getAssemblageDuration : AssemblageData -> Int
 getAssemblageDuration ad =
@@ -148,6 +161,7 @@ getDuration e =
         (ShowImage id) -> Just id.duration
         (ShowText td) -> Just td.duration
         (AddClass acd) -> Nothing
+        (RemoveClass _) -> Nothing
         (HideElement _) -> Nothing
         (Assemblage ad) -> Just <| getAssemblageDuration ad
         (Chapter cd) -> Just <| getChapterDuration cd
@@ -159,6 +173,7 @@ getType e =
         (ShowImage id) -> "show_image"
         (ShowText td) -> "show_text"
         (AddClass acd) -> "add_class"
+        (RemoveClass rcd) -> "remove_class"
         (HideElement _) -> "hide_element"
         (Assemblage ad) -> "assemblage"
         (Chapter _) -> "chapter"
@@ -170,6 +185,7 @@ getId e =
         (ShowImage id) -> id.id
         (ShowText td) -> td.id
         (AddClass acd) -> acd.id
+        (RemoveClass rcd) -> rcd.id
         (HideElement hed) -> hed.label
         (Assemblage ad) -> ad.label
         (Chapter cd) -> cd.label
