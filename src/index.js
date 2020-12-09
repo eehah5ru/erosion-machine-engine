@@ -176,6 +176,9 @@ function isErodedBranch(e) {
 function getTarget() {
   const log = _.partial(console.log, `[getTarget]`);
 
+  // uncomment to test final event
+  // return jQuery();
+
   // deepest the most of time
   // let findFn = _.chain(["deepest", "deepest", "deepest", "find"]).shuffle().head().value();
 
@@ -252,11 +255,9 @@ function replaceElement(el, onError) {
 
   // using label because ids are unique for frames but we need to roll back multipe frames when we know labels only
   // FIXME: make this process more transparent
-  jQuery(target).attr("data-replaced-with", el.label);
+  jQuery(target).attr(`data-replaced-with-${el.label}`, true);
 
   jQuery(target).addClass("eroded");
-
-  //log('eroded element', jQuery(document).find(`* [data-replaced-with='${el.label}']`));
 
   try {
     jQuery(el).insertAfter(jQuery(target));
@@ -310,6 +311,27 @@ function erode(el, onError) {
 }
 
 //
+// do rollback for show* events
+//
+function rollBackShowEvent(eventData) {
+  const log = _.partial(console.log, '[roll-back-show-event]');
+
+  //log('ids to roll back', erodedIds);
+
+  // remove subtitles
+  jQuery(".subtitle-box").remove();
+
+  const eId = eventData.label;
+
+  jQuery(`.${eId}`).remove();
+
+  const e = jQuery(`[data-replaced-with-${eId}=true]`);
+  e.removeClass("eroded");
+  e.removeAttr(`data-replaced-with-${eId}`);
+  e.show();
+}
+
+//
 // play video
 //
 function playVideo(videoElement) {
@@ -322,6 +344,7 @@ function playVideo(videoElement) {
   let subtitlesElement = document.createElement('div');
   jQuery(subtitlesElement).addClass("subtitle-box");
   jQuery(subtitlesElement).addClass("erosion");
+  jQuery(subtitlesElement).addClass("eroded");
   jQuery("body").append(subtitlesElement);
 
 
@@ -608,13 +631,77 @@ function runErosionMachine() {
     const error = _.partial(console.error, '[addClass]');
     //log('data', addClassData);
 
-    var target = jQuery(`#${addClassData.id}`);
+    var target = jQuery();    // empty set by default
+
+    if (_.isEmpty(addClassData.selector)) {
+      //
+      // adding class by an id of html element
+      //
+
+      target = jQuery(`#${addClassData.id}`);
+
+      if (target.length == 0) {
+        error("no target for id " + addClassData.id);
+        return;
+      }
+    } else {
+      //
+      // adding class by selector
+      //
+
+      target = jQuery(addClassData.selector);
+      if (target.length == 0) {
+        error("no target for selector " + addClassData.selector);
+        return;
+      }
+    }
 
     target.addClass(addClassData.class);
+    target.attr(`data-replaced-with-${addClassData.label}`, true);
+    // target.addClass("eroded");
 
-    if (target.length == 0) {
-      error("no target for " + addClassData.id);
+
+  });
+
+  //
+  // remove class
+  //
+  erosionMachine.ports.jsRemoveClass.subscribe(function(removeClassData) {
+    const log = _.partial(console.log, '[remove-class]');
+    const error = _.partial(console.error, '[remove-class]');
+
+    var target = jQuery();    // empty set by default
+
+    if (_.isEmpty(removeClassData.selector)) {
+      //
+      // removing class by an id of html element
+      //
+
+      log(`removing ${removeClassData.class} class from element with id ${removeClassData.id}`);
+
+      target = jQuery(`#${removeClassData.id}`);
+
+      if (target.length == 0) {
+        error("no target for id " + removeClassData.id);
+        return;
+      }
+    } else {
+      //
+      // removing class by selector
+      //
+
+      log(`removing ${removeClassData.class} class from elements by selector '${removeClassData.selector}'`);
+
+      target = jQuery(removeClassData.selector);
+
+      if (target.length == 0) {
+        error("no target for selector " + removeClassData.selector);
+        return;
+      }
     }
+
+    target.removeClass(removeClassData.class);
+    target.removeClass("eroded");
   });
 
   //
@@ -637,7 +724,7 @@ function runErosionMachine() {
 
     // using label because ids are unique for frames but we need to roll back multipe frames when we know labels only
     // FIXME: make this process more transparent
-    jQuery(target).attr("data-replaced-with", hideElementData.label);
+    jQuery(target).attr(`data-replaced-with-${hideElementData.label}`, true);
     jQuery(target).addClass("eroded");
 
     jQuery(target).hide();
@@ -645,24 +732,46 @@ function runErosionMachine() {
   });
 
   //
-  // jsRollBack : elm port
+  // elm port jsRollBackShowVideo
   //
-  erosionMachine.ports.jsRollBack.subscribe(function(erodedIds) {
-    const log = _.partial(console.log, '[roll-back]');
+  erosionMachine.ports.jsRollBackShowVideo.subscribe(function(videoData) {
+    rollBackShowEvent(videoData);
+  });
 
-    //log('ids to roll back', erodedIds);
+  //
+  // elm port jsRollBackShowImage
+  //
+  erosionMachine.ports.jsRollBackShowImage.subscribe(function(imageData) {
+    rollBackShowEvent(imageData);
+  });
 
-    // remove subtitles
-    jQuery(".subtitle-box").remove();
+  //
+  // elm port jsRollBackShowText
+  //
+  erosionMachine.ports.jsRollBackShowText.subscribe(function(textData) {
+    rollBackShowEvent(textData);
+  });
 
-    _.each(erodedIds, function(eId) {
-      jQuery(`.${eId}`).remove();
+  //
+  // elm port jsRollBackHideElement
+  //
+  erosionMachine.ports.jsRollBackShowText.subscribe(function(hideElementData) {
+    const e = jQuery(`[data-replaced-with-${hideElementData.label}=true]`);
+    e.removeClass("eroded");
+    e.removeAttr(`data-replaced-with-${hideElementData.label}`);
+    e.show();
+  });
 
-      const e = jQuery(`[data-replaced-with='${eId}']`);
-      e.removeClass("eroded");
-      e.removeAttr("data-replaced-with");
-      e.show();
-    });
+  //
+  // elm port jsRollBackAddClass
+  //
+  erosionMachine.ports.jsRollBackAddClass.subscribe(function(addClassData) {
+    var $target = jQuery(`[data-replaced-with-${addClassData.label}=true]`);
+
+
+    $target.removeClass(addClassData.class);
+    $target.removeAttr(`data-replaced-with-${addClassData.label}`);
+    $target.removeClass("eroded");
   });
 
   //
@@ -782,6 +891,10 @@ function runErosionMachine() {
     // default lang
       log("unknown lang. set to default:", "en");
       erosionMachine.ports.jsGotLanguage.send("en");
+  });
+
+  jQuery(window).on("touchmove", function() {
+    erosionMachine.ports.jsTouchMove.send("touchmove");
   });
 
   console.log("[runErosionMachine] done");
